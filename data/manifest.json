@@ -1,0 +1,18 @@
+{
+  "files": [
+    "consolidated_debt.csv",
+    "country_risk.csv",
+    "emae.csv",
+    "exchange_rates.csv",
+    "gdp.csv",
+    "industry.csv",
+    "inflation.csv",
+    "interest_rates.csv",
+    "labor.csv",
+    "poverty.csv",
+    "public_debt.csv",
+    "reserves.csv",
+    "trade.csv"
+  ],
+  "generatedAt": "2026-07-13T09:34:19.868Z"
+}
