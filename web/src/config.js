@@ -85,6 +85,11 @@ export const sections = [
     charts: [{ title: 'Dólar por mercado', subtitle: 'Pesos argentinos por dólar', unit: 'ARS/USD', defaultRange: '5Y', series: { argentinadatos_usd_official_retail_sell: 'Oficial', argentinadatos_usd_blue_sell: 'Blue', argentinadatos_usd_mep_sell: 'MEP', argentinadatos_usd_ccl_sell: 'CCL' }}]
   },
   {
+    id: 'mercados', eyebrow: 'MERCADO DE CAPITALES', title: 'S&P Merval en dólares', intro: 'Evolución del principal índice accionario argentino convertido al dólar MEP.', file: 'markets.csv',
+    warning: 'Cálculo de DatArg: cierre diario del S&P Merval en pesos dividido por la cotización de venta del dólar MEP. Es una reconstrucción informativa y no la serie oficial licenciada S&P MERVAL (MEP).',
+    charts: [{ title: 'S&P Merval en dólar MEP', subtitle: 'Puntos de índice en dólares financieros', unit: 'puntos USD', defaultRange: '5Y', series: { datarg_sp_merval_mep_usd: 'Merval / MEP' }}]
+  },
+  {
     id: 'riesgo', eyebrow: 'RIESGO SOBERANO', title: 'Riesgo país', intro: 'Evolución diaria del indicador de riesgo soberano argentino.', file: 'country_risk.csv',
     charts: [{ title: 'Riesgo país', subtitle: 'Puntos básicos', unit: 'pb', defaultRange: '5Y', series: { argentinadatos_country_risk: 'Riesgo país' }}]
   },

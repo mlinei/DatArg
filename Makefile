@@ -1,4 +1,4 @@
-.PHONY: install inflation emae poverty trade gdp labor wages industry exchange-rates country-risk interest-rates test
+.PHONY: install inflation emae poverty trade gdp labor wages industry exchange-rates markets country-risk interest-rates test
 
 install:
 	python3 -m pip install -e .
@@ -29,6 +29,9 @@ industry:
 
 exchange-rates:
 	python3 -m argentina_economic_data exchange-rates
+
+markets:
+	python3 -m argentina_economic_data markets
 
 country-risk:
 	python3 -m argentina_economic_data country-risk

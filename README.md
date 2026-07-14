@@ -89,6 +89,14 @@ aed exchange-rates
 
 Importa cotizaciones diarias de venta del dólar oficial minorista, blue, MEP y CCL. La salida queda en `data/processed/exchange_rates.csv`.
 
+## S&P Merval en dólares
+
+```bash
+aed markets
+```
+
+Construye una serie diaria del S&P Merval en dólar MEP desde 2019, dividiendo el cierre en pesos obtenido de Yahoo Finance por la cotización MEP de ArgentinaDatos. La salida queda en `data/processed/markets.csv`. Es un cálculo reproducible de DatArg y no la serie oficial licenciada de S&P Dow Jones Indices.
+
 ## Riesgo país
 
 ```bash

@@ -27,6 +27,7 @@ function sourceName(row) {
   if (id.startsWith('bcra_')) return 'BCRA';
   if (id.startsWith('mecon_')) return 'Ministerio de Economía';
   if (id.startsWith('argentinadatos_')) return 'ArgentinaDatos';
+  if (id.startsWith('yahoo_')) return 'Yahoo Finance / ArgentinaDatos';
   if (id.startsWith('econosignal_')) return 'Econosignal / Deloitte';
   return id || 'Fuente de datos';
 }

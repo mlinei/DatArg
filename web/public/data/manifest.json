@@ -9,11 +9,12 @@
     "inflation.csv",
     "interest_rates.csv",
     "labor.csv",
+    "markets.csv",
     "poverty.csv",
     "public_debt.csv",
     "reserves.csv",
     "trade.csv",
     "wages.csv"
   ],
-  "generatedAt": "2026-07-14T08:26:10.724Z"
+  "generatedAt": "2026-07-14T08:50:46.991Z"
 }

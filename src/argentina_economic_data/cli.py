@@ -18,6 +18,7 @@ from .consolidated_debt import run as run_consolidated_debt
 from .public_debt import BCRA_VARIABLES, run as run_public_debt
 from .reserves import run as run_reserves
 from .wages import run as run_wages
+from .markets import run as run_markets
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -70,6 +71,9 @@ def main(argv: list[str] | None = None) -> int:
     wages = sub.add_parser("wages", help="ejecuta salarios nominales y reales por sector")
     wages.add_argument("--root", type=Path, default=Path.cwd())
     wages.add_argument("--source-file", type=Path)
+    markets = sub.add_parser("markets", help="ejecuta S&P Merval convertido por dólar MEP")
+    markets.add_argument("--root", type=Path, default=Path.cwd())
+    markets.add_argument("--source-file", type=Path)
     args = parser.parse_args(argv)
     try:
         if args.command == "inflation":
@@ -101,8 +105,10 @@ def main(argv: list[str] | None = None) -> int:
             result = run_public_debt(args.root.resolve(), args.treasury_file, files)
         elif args.command == "reserves":
             result = run_reserves(args.root.resolve(), args.source_file)
-        else:
+        elif args.command == "wages":
             result = run_wages(args.root.resolve(), args.source_file)
+        else:
+            result = run_markets(args.root.resolve(), args.source_file)
     except PipelineError as exc:
         parser.exit(1, f"error: {exc}\n")
     print(json.dumps(result, ensure_ascii=False, indent=2))

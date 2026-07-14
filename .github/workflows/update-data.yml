@@ -68,6 +68,7 @@ jobs:
         run: |
           aed reserves
           aed exchange-rates
+          aed markets
           aed country-risk
           aed interest-rates
 
