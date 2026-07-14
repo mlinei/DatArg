@@ -1,0 +1,94 @@
+name: Actualizar datos de DatArg
+
+on:
+  schedule:
+    # 20:30 de Argentina: consulta todas las fuentes; solo publica cambios reales.
+    - cron: "30 23 * * 1-5"
+  workflow_dispatch:
+    inputs:
+      scope:
+        description: Series a actualizar
+        required: true
+        default: all
+        type: choice
+        options:
+          - all
+          - daily
+          - monthly
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update-economic-data
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Descargar el repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Instalar dependencias
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e . pytest
+          npm ci
+
+      - name: Elegir frecuencia
+        id: frequency
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          EVENT_SCHEDULE: ${{ github.event.schedule }}
+          MANUAL_SCOPE: ${{ inputs.scope }}
+        run: |
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            echo "scope=$MANUAL_SCOPE" >> "$GITHUB_OUTPUT"
+          else
+            echo "scope=all" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Actualizar series diarias
+        if: steps.frequency.outputs.scope == 'daily' || steps.frequency.outputs.scope == 'all'
+        run: |
+          aed reserves
+          aed exchange-rates
+          aed country-risk
+          aed interest-rates
+
+      - name: Actualizar inflación
+        if: steps.frequency.outputs.scope == 'monthly' || steps.frequency.outputs.scope == 'all'
+        run: aed inflation
+
+      - name: Validar pipelines
+        run: pytest -q
+
+      - name: Reconstruir DatArg
+        run: npm run build
+
+      - name: Guardar únicamente cambios reales
+        run: |
+          git add data/processed web/public/data
+          if git diff --cached --quiet; then
+            echo "Las fuentes todavía no publicaron observaciones nuevas."
+            exit 0
+          fi
+          git config user.name "datarg-bot"
+          git config user.email "datarg-bot@users.noreply.github.com"
+          git commit -m "data: actualización automática"
+          git push

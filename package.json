@@ -1,0 +1,15 @@
+{
+  "name": "datarg",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "sync-data": "node web/scripts/sync-data.mjs",
+    "dev": "npm run sync-data && vite --host 0.0.0.0",
+    "build": "npm run sync-data && vite build",
+    "preview": "vite preview --host 0.0.0.0"
+  },
+  "devDependencies": {
+    "vite": "^7.0.0"
+  }
+}
