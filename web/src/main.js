@@ -48,6 +48,10 @@ function chartSeries(chart) {
     const prefix = chart.metrics.poverty ? 'indec_' : 'indec_labor_';
     return Object.fromEntries(Object.entries(chart.metrics).map(([metric,label]) => [`${prefix}${metric}${chart.metrics.poverty?'_persons':''}_${region}`,label]));
   }
+  if (chart.metricToggle) {
+    const metric = state.get(chart) || chart.metricToggle.default;
+    return Object.fromEntries(Object.entries(chart.series).map(([id, label]) => [id.replace('{metric}', metric), label]));
+  }
   return chart.series;
 }
 function filterRange(points, range, from, to) {
@@ -68,7 +72,8 @@ function renderChart(container, rows, chart) {
   if (![...visible].some(id=>availableIds.has(id))) Object.keys(availableSeries).forEach(id=>visible.add(id));
   const selectedSeries = Object.fromEntries(Object.entries(availableSeries).filter(([id])=>visible.has(id)));
   const compositeState = chart.composite ? (state.get(chart) || { sector: chart.composite.defaultSector, metric: chart.composite.defaultMetric }) : null;
-  const displayUnit = chart.composite && compositeState.metric === 'yoy' ? '%' : chart.unit;
+  const toggleMetric = chart.metricToggle ? (state.get(chart) || chart.metricToggle.default) : null;
+  const displayUnit = (chart.composite && compositeState.metric === 'yoy') || toggleMetric === 'mom' ? '%' : chart.unit;
   const allSelectedPoints = rows.filter(r => selectedSeries[r.series_id]).map(r => ({...r, date:+periodDate(r.period), value:+r.value})).filter(r=>Number.isFinite(r.value)).sort((a,b)=>a.date-b.date);
   const coverageDates = [...new Set(allSelectedPoints.map(p=>p.date))];
   const points = filterRange(allSelectedPoints, range, container.dataset.from, container.dataset.to);
@@ -79,7 +84,7 @@ function renderChart(container, rows, chart) {
   const W=900,H=360,L=62,R=18,T=28,B=46; const x=v=>L+(v-minX)/(maxX-minX)*(W-L-R), y=v=>T+(maxY-v)/(maxY-minY)*(H-T-B);
   const ticks=Array.from({length:5},(_,i)=>minY+(maxY-minY)*i/4);
   const paths=latest.map(s=>{const list=points.filter(p=>p.series_id===s.id).sort((a,b)=>a.date-b.date);return `<path class="series-line" stroke="${s.color}" d="${list.map((p,i)=>`${i?'L':'M'}${x(p.date).toFixed(1)},${y(p.value).toFixed(1)}`).join(' ')}"/>`;}).join('');
-  const titleControls = chart.composite ? `<div class="chart-selectors"><label>Vista<select class="metric-select">${Object.entries(chart.composite.metrics).map(([k,v])=>`<option value="${k}" ${compositeState.metric===k?'selected':''}>${v}</option>`).join('')}</select></label><label>Rama<select class="sector-select">${Object.entries(chart.composite.sectors).map(([k,v])=>`<option value="${k}" ${compositeState.sector===k?'selected':''}>${v}</option>`).join('')}</select></label></div>` : chart.selector ? `<select class="chart-select">${Object.entries(chart.selector).map(([k,v])=>`<option value="${k}" ${(state.get(chart)||chart.selected)===k?'selected':''}>${v}</option>`).join('')}</select>` : chart.regionSelector ? `<select class="chart-select">${Object.entries(chart.regionSelector).map(([k,v])=>`<option value="${k}" ${(state.get(chart)||chart.region)===k?'selected':''}>${v}</option>`).join('')}</select>`:'';
+  const titleControls = chart.composite ? `<div class="chart-selectors"><label>Vista<select class="metric-select">${Object.entries(chart.composite.metrics).map(([k,v])=>`<option value="${k}" ${compositeState.metric===k?'selected':''}>${v}</option>`).join('')}</select></label><label>Rama<select class="sector-select">${Object.entries(chart.composite.sectors).map(([k,v])=>`<option value="${k}" ${compositeState.sector===k?'selected':''}>${v}</option>`).join('')}</select></label></div>` : chart.metricToggle ? `<div class="chart-selectors"><label>Vista<select class="toggle-metric-select">${Object.entries(chart.metricToggle.labels).map(([k,v])=>`<option value="${k}" ${toggleMetric===k?'selected':''}>${v}</option>`).join('')}</select></label></div>` : chart.selector ? `<select class="chart-select">${Object.entries(chart.selector).map(([k,v])=>`<option value="${k}" ${(state.get(chart)||chart.selected)===k?'selected':''}>${v}</option>`).join('')}</select>` : chart.regionSelector ? `<select class="chart-select">${Object.entries(chart.regionSelector).map(([k,v])=>`<option value="${k}" ${(state.get(chart)||chart.region)===k?'selected':''}>${v}</option>`).join('')}</select>`:'';
   const sources = [...new Map(allSelectedPoints.map(row => [sourceName(row), row])).values()].filter(row=>row.source_url);
   const firstCoverage = coverageDates[0], lastCoverage = coverageDates.at(-1);
   const activeFrom = container.dataset.from ? +new Date(`${container.dataset.from}-01T00:00:00Z`) : (points[0]?.date ?? firstCoverage);
@@ -107,6 +112,7 @@ function renderChart(container, rows, chart) {
   const select=container.querySelector('.chart-select'); if(select) select.onchange=()=>{state.set(chart,select.value);visibility.delete(chart);renderChart(container,rows,chart)};
   const metricSelect=container.querySelector('.metric-select'),sectorSelect=container.querySelector('.sector-select');
   if(metricSelect&&sectorSelect){const updateComposite=()=>{state.set(chart,{metric:metricSelect.value,sector:sectorSelect.value});visibility.delete(chart);delete container.dataset.from;delete container.dataset.to;renderChart(container,rows,chart)};metricSelect.onchange=sectorSelect.onchange=updateComposite;}
+  const toggleMetricSelect=container.querySelector('.toggle-metric-select'); if(toggleMetricSelect) toggleMetricSelect.onchange=()=>{state.set(chart,toggleMetricSelect.value);visibility.delete(chart);delete container.dataset.from;delete container.dataset.to;renderChart(container,rows,chart)};
   const svg=container.querySelector('svg'), tip=container.querySelector('.tooltip'), cross=container.querySelector('.crosshair'), dot=container.querySelector('.hover-dot');
   svg.onpointermove=e=>{const rect=svg.getBoundingClientRect(), px=(e.clientX-rect.left)/rect.width*W, target=minX+Math.max(0,Math.min(1,(px-L)/(W-L-R)))*(maxX-minX); const nearest=points.reduce((a,b)=>Math.abs(b.date-target)<Math.abs(a.date-target)?b:a); cross.setAttribute('x1',x(nearest.date));cross.setAttribute('x2',x(nearest.date));dot.setAttribute('cx',x(nearest.date));dot.setAttribute('cy',y(nearest.value));cross.style.opacity=dot.style.opacity=1; tip.innerHTML=`<b>${nearest.period}</b><span>${selectedSeries[nearest.series_id]}</span><strong>${human(nearest.value,displayUnit)}</strong>`;tip.style.opacity=1;tip.style.left=`${Math.min(78,Math.max(8,(x(nearest.date)/W)*100))}%`;};
   svg.onpointerleave=()=>{tip.style.opacity=cross.style.opacity=dot.style.opacity=0};

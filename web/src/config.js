@@ -64,8 +64,8 @@ export const sections = [
     id: 'salarios', eyebrow: 'INGRESOS', title: 'Salarios', intro: 'Evolución mensual del índice de salarios del INDEC para el total y sus segmentos oficiales.', file: 'wages.csv',
     warning: 'El sector privado no registrado es una estimación basada en la EPH y no equivale a la totalidad del empleo informal. El salario real se calcula como índice salarial dividido por IPC nacional y se expresa con diciembre de 2016=100.',
     charts: [
-      { title: 'Salarios nominales', subtitle: 'Índice oficial, octubre de 2016=100', unit: 'índice', series: Object.fromEntries(Object.entries(wages).map(([key, label]) => [`indec_wage_${key}_nominal_index`, label])) },
-      { title: 'Salarios reales', subtitle: 'Poder adquisitivo frente al IPC; diciembre de 2016=100', unit: 'índice real', series: Object.fromEntries(Object.entries(wages).map(([key, label]) => [`indec_wage_${key}_real_index`, label])) }
+      { title: 'Salarios nominales', subtitle: 'Índice oficial o cambio contra el mes anterior', unit: 'índice', metricToggle: { default: 'index', labels: { index: 'Nivel del índice', mom: 'Variación mensual' } }, series: Object.fromEntries(Object.entries(wages).map(([key, label]) => [`indec_wage_${key}_nominal_{metric}`, label])) },
+      { title: 'Salarios reales', subtitle: 'Poder adquisitivo frente al IPC; nivel base diciembre de 2016=100', unit: 'índice real', metricToggle: { default: 'index', labels: { index: 'Nivel del índice', mom: 'Variación mensual' } }, series: Object.fromEntries(Object.entries(wages).map(([key, label]) => [`indec_wage_${key}_real_{metric}`, label])) }
     ]
   },
   {

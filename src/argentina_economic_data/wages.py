@@ -95,6 +95,24 @@ def add_real_indices(records: list[dict[str, str]], inflation_path: Path, artifa
     return result
 
 
+def add_monthly_changes(records: list[dict[str, str]], artifact: Artifact) -> list[dict[str, str]]:
+    result = list(records)
+    by_series: dict[str, list[dict[str, str]]] = {}
+    for row in records:
+        if row["series_id"].endswith("_index"):
+            by_series.setdefault(row["series_id"], []).append(row)
+    for series_id, rows in by_series.items():
+        rows.sort(key=lambda row: row["period"])
+        for previous, current in zip(rows, rows[1:]):
+            old = Decimal(previous["value"]); new = Decimal(current["value"])
+            change = (new / old - Decimal(1)) * Decimal(100)
+            result.append(_record(
+                series_id.removesuffix("_index") + "_mom", current["period"], change,
+                "percent_change", "calculated", current["source_id"] + "_monthly_change", artifact,
+            ))
+    return result
+
+
 def promote(records: list[dict[str, str]], root: Path, run_id: str) -> dict[str, object]:
     records.sort(key=lambda row: (row["series_id"], row["period"]))
     keys = [(row["series_id"], row["period"]) for row in records]
@@ -132,4 +150,5 @@ def run(root: Path, source_file: Path | None = None) -> dict[str, object]:
     run_id = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     artifact = acquire("indec_wage_index", WAGES_URL, root / "data" / "raw", source_file)
     records = add_real_indices(extract(artifact), root / "data" / "processed" / "inflation.csv", artifact)
+    records = add_monthly_changes(records, artifact)
     return promote(records, root, run_id)

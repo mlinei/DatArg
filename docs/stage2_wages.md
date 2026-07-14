@@ -14,6 +14,8 @@ Para cada segmento y mes común se calcula:
 
 Así, diciembre de 2016 vale 100. Un valor superior a 100 indica mayor poder adquisitivo que en esa base y uno inferior indica menor poder adquisitivo. No se obtiene restando niveles ni variaciones mensuales.
 
+Para los índices nominales y reales también se calcula la variación contra el mes inmediatamente anterior: `(índice_t / índice_t-1 - 1) × 100`.
+
 ## Ejecución
 
 ```bash

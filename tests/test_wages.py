@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 
 from argentina_economic_data.inflation import Artifact, PipelineError
-from argentina_economic_data.wages import add_real_indices, extract
+from argentina_economic_data.wages import add_monthly_changes, add_real_indices, extract
 
 
 HEADER = "periodo;IS_sector_privado_registrado;IS_sector_publico;IS_total_registrado;IS_sector_no_registrado;IS_indice_total\n"
@@ -44,3 +44,12 @@ def test_rejects_unknown_schema(tmp_path: Path):
     source = tmp_path / "wages.csv"; source.write_text("periodo;otro\n1/1/2020;1\n", encoding="utf-8")
     with pytest.raises(PipelineError, match="esquema inesperado"):
         extract(artifact(source))
+
+
+def test_calculates_monthly_change_for_nominal_and_real(tmp_path: Path):
+    source = tmp_path / "wages.csv"
+    source.write_text(HEADER + "1/12/2016;100;100;100;100;100\n1/1/2017;110;110;110;110;110\n", encoding="utf-8")
+    rows = add_monthly_changes(extract(artifact(source)), artifact(source))
+    total = next(row for row in rows if row["series_id"] == "indec_wage_total_nominal_mom")
+    assert Decimal(total["value"]) == Decimal("10.000000")
+    assert total["unit"] == "percent_change"
