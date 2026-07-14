@@ -11,7 +11,9 @@ for (const file of files) {
   const current = economicFields(await readFile(resolve(directory, file), 'utf8'));
   let previous;
   try {
-    previous = economicFields(execFileSync('git', ['show', `HEAD:data/processed/${file}`], { encoding: 'utf8' }));
+    previous = economicFields(execFileSync('git', ['show', `HEAD:data/processed/${file}`], {
+      encoding: 'utf8', maxBuffer: 100 * 1024 * 1024
+    }));
   } catch {
     changed = true;
     break;
