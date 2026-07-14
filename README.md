@@ -73,6 +73,14 @@ aed industry
 
 Importa el IPI manufacturero general y sus divisiones, con índice, variación interanual y acumulada. La salida queda en `data/processed/industry.csv`.
 
+## Salarios nominales y reales
+
+```bash
+aed wages
+```
+
+Importa el índice mensual de salarios total, total registrado, privado registrado, público y privado no registrado. También calcula índices reales dividiendo cada índice salarial por el IPC nacional y reexpresándolos con diciembre de 2016=100. La salida queda en `data/processed/wages.csv`.
+
 ## Tipos de cambio
 
 ```bash

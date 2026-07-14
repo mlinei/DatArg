@@ -73,7 +73,9 @@ jobs:
 
       - name: Actualizar inflación
         if: steps.frequency.outputs.scope == 'monthly' || steps.frequency.outputs.scope == 'all'
-        run: aed inflation
+        run: |
+          aed inflation
+          aed wages
 
       - name: Validar pipelines
         run: pytest -q
@@ -83,11 +85,11 @@ jobs:
 
       - name: Guardar únicamente cambios reales
         run: |
-          git add data/processed web/public/data
-          if git diff --cached --quiet; then
+          if ! node web/scripts/has-data-changes.mjs; then
             echo "Las fuentes todavía no publicaron observaciones nuevas."
             exit 0
           fi
+          git add data/processed web/public/data
           git config user.name "datarg-bot"
           git config user.email "datarg-bot@users.noreply.github.com"
           git commit -m "data: actualización automática"

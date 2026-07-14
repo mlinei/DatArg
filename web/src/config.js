@@ -21,6 +21,10 @@ const industry = {
   other_transport_equipment: 'Otro equipo de transporte', furniture_other_manufacturing: 'Muebles y otras',
   other_equipment_instruments: 'Otros equipos e instrumentos', tobacco: 'Tabaco'
 };
+const wages = {
+  total: 'Total', total_registered: 'Total registrado', private_registered: 'Privado registrado',
+  public: 'Sector público', private_unregistered: 'Privado no registrado'
+};
 
 export const sections = [
   {
@@ -55,6 +59,14 @@ export const sections = [
   {
     id: 'trabajo', eyebrow: 'MERCADO LABORAL', title: 'Empleo y participación', intro: 'Tasas trimestrales de actividad, empleo y desocupación para 31 aglomerados urbanos.', file: 'labor.csv',
     charts: [{ title: 'Indicadores laborales', subtitle: 'Seleccioná total nacional o una región', unit: '%', regionSelector: regions, metrics: { activity: 'Actividad', employment: 'Empleo', unemployment: 'Desocupación' }, region: 'total_31_agglomerates' }]
+  },
+  {
+    id: 'salarios', eyebrow: 'INGRESOS', title: 'Salarios', intro: 'Evolución mensual del índice de salarios del INDEC para el total y sus segmentos oficiales.', file: 'wages.csv',
+    warning: 'El sector privado no registrado es una estimación basada en la EPH y no equivale a la totalidad del empleo informal. El salario real se calcula como índice salarial dividido por IPC nacional y se expresa con diciembre de 2016=100.',
+    charts: [
+      { title: 'Salarios nominales', subtitle: 'Índice oficial, octubre de 2016=100', unit: 'índice', series: Object.fromEntries(Object.entries(wages).map(([key, label]) => [`indec_wage_${key}_nominal_index`, label])) },
+      { title: 'Salarios reales', subtitle: 'Poder adquisitivo frente al IPC; diciembre de 2016=100', unit: 'índice real', series: Object.fromEntries(Object.entries(wages).map(([key, label]) => [`indec_wage_${key}_real_index`, label])) }
+    ]
   },
   {
     id: 'pobreza', eyebrow: 'CONDICIONES DE VIDA', title: 'Pobreza e indigencia', intro: 'Incidencia semestral sobre personas en los 31 aglomerados urbanos relevados por la EPH.', file: 'poverty.csv',

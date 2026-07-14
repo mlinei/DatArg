@@ -17,6 +17,7 @@ from .interest_rates import run as run_interest_rates
 from .consolidated_debt import run as run_consolidated_debt
 from .public_debt import BCRA_VARIABLES, run as run_public_debt
 from .reserves import run as run_reserves
+from .wages import run as run_wages
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -66,6 +67,9 @@ def main(argv: list[str] | None = None) -> int:
     reserves = sub.add_parser("reserves", help="ejecuta reservas internacionales brutas del BCRA")
     reserves.add_argument("--root", type=Path, default=Path.cwd())
     reserves.add_argument("--source-file", type=Path)
+    wages = sub.add_parser("wages", help="ejecuta salarios nominales y reales por sector")
+    wages.add_argument("--root", type=Path, default=Path.cwd())
+    wages.add_argument("--source-file", type=Path)
     args = parser.parse_args(argv)
     try:
         if args.command == "inflation":
@@ -95,8 +99,10 @@ def main(argv: list[str] | None = None) -> int:
         elif args.command == "public-debt":
             files = {i: getattr(args, f"variable_{i}_file") for i in BCRA_VARIABLES}
             result = run_public_debt(args.root.resolve(), args.treasury_file, files)
-        else:
+        elif args.command == "reserves":
             result = run_reserves(args.root.resolve(), args.source_file)
+        else:
+            result = run_wages(args.root.resolve(), args.source_file)
     except PipelineError as exc:
         parser.exit(1, f"error: {exc}\n")
     print(json.dumps(result, ensure_ascii=False, indent=2))
