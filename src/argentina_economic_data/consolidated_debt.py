@@ -17,6 +17,8 @@ from .inflation import OUTPUT_COLUMNS, Artifact, PipelineError, acquire
 SOURCE_ID = "econosignal_consolidated_net_debt"
 SOURCE_URL = "https://www.deloitte.com/content/dam/assets-zone4/latam/es/docs/services/financial-advisory/2025/diagnostico-macro-argentina-noviembre-2025-espanol.pdf"
 PERIOD = "2025-Q2"
+BENCHMARK_SOURCE_ID = "chequeado_debt_private_ooi_bcra_net_reserves"
+BENCHMARK_SOURCE_URL = "https://chequeado.com/el-explicador/que-paso-con-la-deuda-en-cada-presidencia-los-datos-detras-de-la-pelea-entre-luis-caputo-y-julia-strada/"
 
 # Etiqueta del PDF, identificador estable y signo en la identidad consolidada.
 COMPONENTS = (
@@ -78,6 +80,38 @@ def _record(series_id: str, value: Decimal, unit: str, artifact: Artifact) -> di
     }
 
 
+def calculate_benchmark_series(path: Path, artifact: Artifact) -> list[dict[str, str]]:
+    rows = []
+    with path.open(encoding="utf-8", newline="") as handle:
+        source_rows = list(csv.DictReader(handle))
+    for source in source_rows:
+        private_ooi = Decimal(source["gross_private_and_ooi_million_usd"])
+        reserves = Decimal(source["net_reserves_million_usd"])
+        bcra = Decimal(source["bcra_liabilities_million_usd"])
+        gross = Decimal(source["gross_total_million_usd"])
+        gross_gdp = Decimal(source["gross_debt_percent_gdp"])
+        published = Decimal(source["published_net_debt_million_usd"])
+        calculated = private_ooi + bcra - reserves
+        if abs(calculated - published) > Decimal("0.000001"):
+            raise PipelineError(f"deuda consolidada comparable: identidad inconsistente en {source['period']}")
+        implied_gdp = gross / (gross_gdp / Decimal(100))
+        ratio = calculated / implied_gdp * Decimal(100)
+        frequency = "quarterly" if "Q" in source["period"] else "monthly"
+        for series_id, value, unit in (
+            ("estimated_comparable_net_public_debt", calculated, "million_usd"),
+            ("estimated_comparable_net_public_debt_gdp", ratio, "percent_of_gdp"),
+        ):
+            record = _record(series_id, value, unit, artifact)
+            record.update({
+                "period": source["period"], "frequency": frequency,
+                "source_id": BENCHMARK_SOURCE_ID, "source_url": BENCHMARK_SOURCE_URL,
+            })
+            rows.append(record)
+    if len(source_rows) != 6 or source_rows[0]["period"] != "2003-Q2" or source_rows[-1]["period"] != "2026-05":
+        raise PipelineError("deuda consolidada comparable: cobertura de referencia inesperada")
+    return rows
+
+
 def promote(records: list[dict[str, str]], root: Path, run_id: str) -> dict[str, object]:
     records.sort(key=lambda row: (row["series_id"], row["period"]))
     target_dir = root / "data" / "processed"
@@ -91,8 +125,8 @@ def promote(records: list[dict[str, str]], root: Path, run_id: str) -> dict[str,
             old = {(r["series_id"], r["period"]): r["value"] for r in csv.DictReader(handle)}
     new = {(r["series_id"], r["period"]): r["value"] for r in records}
     report = {
-        "run_id": run_id, "rows": len(records), "series": len(records),
-        "coverage": {"from": PERIOD, "through": PERIOD},
+        "run_id": run_id, "rows": len(records), "series": len({r["series_id"] for r in records}),
+        "coverage": {"from": min(r["period"] for r in records), "through": max(r["period"] for r in records)},
         "created": len(new.keys() - old.keys()), "deleted": len(old.keys() - new.keys()),
         "modified": sum(old[k] != new[k] for k in old.keys() & new.keys()),
         "methodology_version": "econosignal_psds_2025q2_v1",
@@ -114,4 +148,5 @@ def promote(records: list[dict[str, str]], root: Path, run_id: str) -> dict[str,
 def run(root: Path, source_file: Path | None = None) -> dict[str, object]:
     run_id = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     artifact = acquire(SOURCE_ID, SOURCE_URL, root / "data" / "raw", source_file)
-    return promote(extract(artifact), root, run_id)
+    benchmarks = calculate_benchmark_series(root / "data" / "reference" / "consolidated_debt_benchmarks.csv", artifact)
+    return promote(extract(artifact) + benchmarks, root, run_id)

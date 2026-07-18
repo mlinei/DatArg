@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from argentina_economic_data.consolidated_debt import extract
+from argentina_economic_data.consolidated_debt import calculate_benchmark_series, extract
 from argentina_economic_data.inflation import Artifact, PipelineError
 
 
@@ -33,3 +33,21 @@ def test_extracts_and_validates_published_identity():
 def test_rejects_inconsistent_total():
     with pytest.raises(PipelineError, match="identidad inconsistente"):
         extract(artifact(), TEXT.replace("288.720.510", "288.000.000"))
+
+
+def test_calculates_comparable_series_and_gdp_ratio(tmp_path):
+    path = tmp_path / "benchmarks.csv"
+    path.write_text(
+        "period,gross_private_and_ooi_million_usd,net_reserves_million_usd,bcra_liabilities_million_usd,gross_total_million_usd,gross_debt_percent_gdp,published_net_debt_million_usd\n"
+        "2003-Q2,146061.1,1300,5862,152587,78,150623.1\n"
+        "2007-Q3,141085.924,41829,18532.80255,165206,35,117789.72655\n"
+        "2015-Q3,93703,-1446,38532.91796,239959,52.6,133681.91796\n"
+        "2019-11,195811.88,12100,17422.06596,313299,89.8,201133.94596\n"
+        "2023-11,229800.24,-10500,70043.66141,425556,97.8,310343.90141\n"
+        "2026-05,268392.88,-9100,15546.50884,479273,70,293039.38884\n",
+        encoding="utf-8",
+    )
+    rows = calculate_benchmark_series(path, artifact())
+    values = {(r["series_id"], r["period"]): r["value"] for r in rows}
+    assert values[("estimated_comparable_net_public_debt", "2026-05")] == "293039.388840"
+    assert values[("estimated_comparable_net_public_debt_gdp", "2026-05")] == "42.799735"

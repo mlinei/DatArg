@@ -111,5 +111,12 @@ export const sections = [
       { title: 'Deuda bruta del Tesoro', subtitle: 'Administración Central; nivel en USD o proporción del PIB', unit: 'USD M', metricToggle: { default: 'usd', labels: { usd: 'Millones de USD', gdp: 'Porcentaje del PIB' }, units: { usd: 'USD M', gdp: '%' }, seriesByMetric: { usd: { mecon_gross_central_government_debt: 'Tesoro' }, gdp: { mecon_gross_central_government_debt_gdp_ratio: 'Tesoro' } } }, series: { mecon_gross_central_government_debt: 'Tesoro' }},
       { title: 'Pasivos seleccionados del BCRA', subtitle: 'Instrumentos remunerados convertidos a USD', unit: 'USD M', series: { bcra_interest_bearing_liabilities: 'BCRA' }}
     ]
+  },
+  {
+    id: 'deuda-neta', eyebrow: 'FINANZAS PÚBLICAS', title: 'Deuda estatal neta', intro: 'Medición comparable que excluye deuda intrasector público e incorpora los pasivos financieros del BCRA y las reservas netas.', file: 'consolidated_debt.csv',
+    warning: 'Estimación, no estadística oficial. Fórmula comparable de Chequeado/Aurum: deuda de la Administración Central con privados y organismos internacionales + pasivos seleccionados del BCRA − reservas netas. Los puntos son cortes históricos publicados, no una serie interpolada. Facimex también descuenta los depósitos del Tesoro y aplica ajustes específicos al BOPREAL; por eso su estimación más amplia no se empalma con esta línea.',
+    charts: [
+      { title: 'Deuda estatal neta comparable', subtitle: 'Puntos históricos calculados con un criterio constante', unit: 'USD M', metricToggle: { default: 'usd', labels: { usd: 'Millones de USD', gdp: 'Porcentaje del PIB' }, units: { usd: 'USD M', gdp: '%' }, seriesByMetric: { usd: { estimated_comparable_net_public_debt: 'Deuda neta' }, gdp: { estimated_comparable_net_public_debt_gdp: 'Deuda neta' } } }, series: { estimated_comparable_net_public_debt: 'Deuda neta' }}
+    ]
   }
 ];
