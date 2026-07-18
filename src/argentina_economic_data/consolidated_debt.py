@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import csv
+import hashlib
 import json
 import os
 import re
@@ -19,6 +20,12 @@ SOURCE_URL = "https://www.deloitte.com/content/dam/assets-zone4/latam/es/docs/se
 PERIOD = "2025-Q2"
 BENCHMARK_SOURCE_ID = "chequeado_debt_private_ooi_bcra_net_reserves"
 BENCHMARK_SOURCE_URL = "https://chequeado.com/el-explicador/que-paso-con-la-deuda-en-cada-presidencia-los-datos-detras-de-la-pelea-entre-luis-caputo-y-julia-strada/"
+FACIMEX_SOURCE_ID = "facimex_net_consolidated_debt"
+FACIMEX_SOURCE_URL = "https://www.bloomberglinea.com/latinoamerica/argentina/deuda-neta-consolidada-del-estado-argentino-sube-en-el-primer-trimestre-pero-sigue-debajo-de-2023/"
+
+
+def _file_sha256(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
 
 # Etiqueta del PDF, identificador estable y signo en la identidad consolidada.
 COMPONENTS = (
@@ -82,6 +89,7 @@ def _record(series_id: str, value: Decimal, unit: str, artifact: Artifact) -> di
 
 def calculate_benchmark_series(path: Path, artifact: Artifact) -> list[dict[str, str]]:
     rows = []
+    source_sha256 = _file_sha256(path)
     with path.open(encoding="utf-8", newline="") as handle:
         source_rows = list(csv.DictReader(handle))
     for source in source_rows:
@@ -105,11 +113,35 @@ def calculate_benchmark_series(path: Path, artifact: Artifact) -> list[dict[str,
             record.update({
                 "period": source["period"], "frequency": frequency,
                 "source_id": BENCHMARK_SOURCE_ID, "source_url": BENCHMARK_SOURCE_URL,
+                "source_sha256": source_sha256,
             })
             rows.append(record)
     if len(source_rows) != 6 or source_rows[0]["period"] != "2003-Q2" or source_rows[-1]["period"] != "2026-05":
         raise PipelineError("deuda consolidada comparable: cobertura de referencia inesperada")
     return rows
+
+
+def extract_facimex_annual(path: Path, artifact: Artifact) -> list[dict[str, str]]:
+    records = []
+    source_sha256 = _file_sha256(path)
+    with path.open(encoding="utf-8", newline="") as handle:
+        source_rows = list(csv.DictReader(handle))
+    for source in source_rows:
+        for series_id, column, unit in (
+            ("estimated_facimex_net_consolidated_debt", "value_million_usd", "million_usd"),
+            ("estimated_facimex_net_consolidated_debt_gdp", "percent_gdp", "percent_of_gdp"),
+        ):
+            record = _record(series_id, Decimal(source[column]), unit, artifact)
+            record.update({
+                "period": source["period"], "frequency": "quarterly",
+                "source_id": FACIMEX_SOURCE_ID, "source_url": FACIMEX_SOURCE_URL,
+                "source_sha256": source_sha256,
+            })
+            records.append(record)
+    expected = ["2023-Q3", "2024-Q4", "2025-Q4", "2026-Q1"]
+    if [r["period"] for r in source_rows] != expected:
+        raise PipelineError("deuda consolidada Facimex: cobertura anual inesperada")
+    return records
 
 
 def promote(records: list[dict[str, str]], root: Path, run_id: str) -> dict[str, object]:
@@ -149,4 +181,5 @@ def run(root: Path, source_file: Path | None = None) -> dict[str, object]:
     run_id = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     artifact = acquire(SOURCE_ID, SOURCE_URL, root / "data" / "raw", source_file)
     benchmarks = calculate_benchmark_series(root / "data" / "reference" / "consolidated_debt_benchmarks.csv", artifact)
-    return promote(extract(artifact) + benchmarks, root, run_id)
+    annual = extract_facimex_annual(root / "data" / "reference" / "facimex_net_debt_annual.csv", artifact)
+    return promote(extract(artifact) + benchmarks + annual, root, run_id)

@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from argentina_economic_data.consolidated_debt import calculate_benchmark_series, extract
+from argentina_economic_data.consolidated_debt import calculate_benchmark_series, extract, extract_facimex_annual
 from argentina_economic_data.inflation import Artifact, PipelineError
 
 
@@ -51,3 +51,19 @@ def test_calculates_comparable_series_and_gdp_ratio(tmp_path):
     values = {(r["series_id"], r["period"]): r["value"] for r in rows}
     assert values[("estimated_comparable_net_public_debt", "2026-05")] == "293039.388840"
     assert values[("estimated_comparable_net_public_debt_gdp", "2026-05")] == "42.799735"
+
+
+def test_extracts_facimex_annual_points(tmp_path):
+    path = tmp_path / "facimex.csv"
+    path.write_text(
+        "period,value_million_usd,percent_gdp,value_basis\n"
+        "2023-Q3,265600,40.6,published_difference\n"
+        "2024-Q4,240663.576663,37.7,derived\n"
+        "2025-Q4,247000,36,published\n"
+        "2026-Q1,254000,36.9,published\n",
+        encoding="utf-8",
+    )
+    rows = extract_facimex_annual(path, artifact())
+    values = {(r["series_id"], r["period"]): r["value"] for r in rows}
+    assert values[("estimated_facimex_net_consolidated_debt", "2025-Q4")] == "247000.000000"
+    assert values[("estimated_facimex_net_consolidated_debt_gdp", "2026-Q1")] == "36.900000"

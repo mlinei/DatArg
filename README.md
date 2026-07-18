@@ -128,7 +128,7 @@ Importa BADLAR y TAMAR de bancos privados, tanto TNA como TEA, desde la API v4 o
 aed consolidated-debt
 ```
 
-Publica una estimación documentada de deuda estatal neta (Tesoro + BCRA − activos), en millones de USD y porcentaje del PIB. Incluye seis cortes históricos comparables de la planilla metodológica de Chequeado y conserva como control separado la descomposición de Econosignal para `2025-Q2`. La salida queda en `data/processed/consolidated_debt.csv`; no es una estadística oficial ni se interpolan los períodos faltantes.
+Publica una estimación documentada de deuda estatal neta (Tesoro + BCRA − activos), en millones de USD y porcentaje del PIB. Incluye seis cortes históricos comparables de Chequeado/Aurum, una secuencia anual Facimex desde 2023 y la descomposición de Econosignal para `2025-Q2`. La salida queda en `data/processed/consolidated_debt.csv`; no es una estadística oficial ni se interpolan los períodos faltantes.
 
 ## Deuda del Tesoro y pasivos del BCRA
 

@@ -114,9 +114,9 @@ export const sections = [
   },
   {
     id: 'deuda-neta', eyebrow: 'FINANZAS PÚBLICAS', title: 'Deuda estatal neta', intro: 'Medición comparable que excluye deuda intrasector público e incorpora los pasivos financieros del BCRA y las reservas netas.', file: 'consolidated_debt.csv',
-    warning: 'Estimación, no estadística oficial. Fórmula comparable de Chequeado/Aurum: deuda de la Administración Central con privados y organismos internacionales + pasivos seleccionados del BCRA − reservas netas. Los puntos son cortes históricos publicados, no una serie interpolada. Facimex también descuenta los depósitos del Tesoro y aplica ajustes específicos al BOPREAL; por eso su estimación más amplia no se empalma con esta línea.',
+    warning: 'Estimación, no estadística oficial. Los cortes antiguos siguen la fórmula comparable de Chequeado/Aurum. Desde 2023 se muestra por separado la medición anual de Facimex, que consolida Tesoro y BCRA, elimina tenencias intraestatales y resta reservas netas y depósitos del Tesoro. El nivel 2024 se deriva del ratio Facimex y el PIB corriente del Banco Mundial; no se interpolan períodos.',
     charts: [
-      { title: 'Deuda estatal neta comparable', subtitle: 'Puntos históricos calculados con un criterio constante', unit: 'USD M', metricToggle: { default: 'usd', labels: { usd: 'Millones de USD', gdp: 'Porcentaje del PIB' }, units: { usd: 'USD M', gdp: '%' }, seriesByMetric: { usd: { estimated_comparable_net_public_debt: 'Deuda neta' }, gdp: { estimated_comparable_net_public_debt_gdp: 'Deuda neta' } } }, series: { estimated_comparable_net_public_debt: 'Deuda neta' }}
+      { title: 'Deuda estatal neta consolidada', subtitle: 'Cortes históricos y secuencia anual desde 2023', unit: 'USD M', metricToggle: { default: 'usd', labels: { usd: 'Millones de USD', gdp: 'Porcentaje del PIB' }, units: { usd: 'USD M', gdp: '%' }, seriesByMetric: { usd: { estimated_comparable_net_public_debt: 'Cortes Chequeado/Aurum', estimated_facimex_net_consolidated_debt: 'Facimex desde 2023' }, gdp: { estimated_comparable_net_public_debt_gdp: 'Cortes Chequeado/Aurum', estimated_facimex_net_consolidated_debt_gdp: 'Facimex desde 2023' } } }, series: { estimated_facimex_net_consolidated_debt: 'Facimex desde 2023' }}
     ]
   }
 ];

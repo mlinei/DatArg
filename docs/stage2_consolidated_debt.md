@@ -40,7 +40,9 @@ deuda estatal neta comparable = deuda de la Administración Central con privados
 
 Se publican solamente los seis cortes tabulados por la fuente (`2003-Q2`, `2007-Q3`, `2015-Q3`, `2019-11`, `2023-11` y `2026-05`); no se interpola entre ellos. El porcentaje del PIB se deriva del PIB implícito en la deuda bruta y el cociente deuda bruta/PIB de la misma planilla, de modo que numerador y denominador respetan un único corte metodológico.
 
-La variante de Facimex citada por Bloomberg Línea es más restrictiva: también descuenta depósitos del Tesoro en pesos y dólares y ajusta el universo de BOPREAL. Su control publicado para `2026-Q1` es USD 254.000 millones, o 36,9% del PIB. Se documenta como contraste, pero no se empalma con la serie de Chequeado porque el perímetro no es idéntico.
+La variante de Facimex citada por Bloomberg Línea es más restrictiva: también descuenta depósitos del Tesoro en pesos y dólares y ajusta el universo de BOPREAL. Se publica como una serie distinta con un corte por año desde 2023: `2023-Q3`, `2024-Q4`, `2025-Q4` y `2026-Q1`. No se empalma con la serie de Chequeado porque el perímetro no es idéntico.
+
+Los niveles y cocientes de 2025 y 2026 fueron publicados directamente por Facimex/Bloomberg. El corte 2023 surge del nivel 2026 y la diferencia publicada contra 2023. Para 2024, Facimex publicó el cociente de 37,7% del PIB pero no el nivel tabular: DatArg lo deriva aplicando ese cociente al PIB 2024 en dólares corrientes del Banco Mundial (USD 638.365,5 millones), obteniendo USD 240.663,6 millones. Este punto queda identificado como derivado y no como una observación directa.
 
 ## Controles
 
