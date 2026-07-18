@@ -122,6 +122,14 @@ aed interest-rates
 
 Importa BADLAR y TAMAR de bancos privados, tanto TNA como TEA, desde la API v4 oficial del BCRA. La salida queda en `data/processed/interest_rates.csv`.
 
+## Recaudación y resultado fiscal
+
+```bash
+aed fiscal
+```
+
+Importa la recaudación tributaria y los resultados primario y financiero mensuales del Sector Público Nacional no Financiero desde 2017. Conserva los niveles nominales, calcula niveles a precios de diciembre de 2025 y variaciones reales con el IPC nacional, y agrega vistas anuales reales y como porcentaje del PIB. La salida queda en `data/processed/fiscal.csv`. La primera reconstrucción completa puede repetirse con `aed fiscal --refresh-history`.
+
 ## Deuda neta consolidada
 
 ```bash
@@ -152,4 +160,4 @@ make test
 
 ## Actualizaciones automáticas
 
-GitHub Actions consulta las series diarias y la inflación en días hábiles, y solo guarda cambios reales después de ejecutar las validaciones y reconstruir DatArg. La configuración y la operación manual están documentadas en `docs/automatic_updates.md`.
+GitHub Actions consulta las series diarias y mensuales —incluidas recaudación y cuentas fiscales— en días hábiles, y solo guarda cambios reales después de ejecutar las validaciones y reconstruir DatArg. La configuración y la operación manual están documentadas en `docs/automatic_updates.md`.

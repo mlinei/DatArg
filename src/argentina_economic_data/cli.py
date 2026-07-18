@@ -20,6 +20,7 @@ from .reserves import run as run_reserves
 from .wages import run as run_wages
 from .markets import run as run_markets
 from .net_reserves import run as run_net_reserves
+from .fiscal import run as run_fiscal
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -82,6 +83,11 @@ def main(argv: list[str] | None = None) -> int:
     markets = sub.add_parser("markets", help="ejecuta S&P Merval convertido por dólar MEP")
     markets.add_argument("--root", type=Path, default=Path.cwd())
     markets.add_argument("--source-file", type=Path)
+    fiscal = sub.add_parser("fiscal", help="ejecuta recaudación y resultados fiscales del SPN")
+    fiscal.add_argument("--root", type=Path, default=Path.cwd())
+    fiscal.add_argument("--tax-file", type=Path, action="append", help="planilla de recaudación local; repetible")
+    fiscal.add_argument("--fiscal-file", type=Path, action="append", help="planilla o ZIP fiscal local; repetible")
+    fiscal.add_argument("--refresh-history", action="store_true", help="reconstruye el historial oficial desde 2017")
     args = parser.parse_args(argv)
     try:
         if args.command == "inflation":
@@ -117,8 +123,10 @@ def main(argv: list[str] | None = None) -> int:
             result = run_net_reserves(args.root.resolve(), args.weekly_file, args.flow_file, args.cny_file, args.usd_file)
         elif args.command == "wages":
             result = run_wages(args.root.resolve(), args.source_file)
-        else:
+        elif args.command == "markets":
             result = run_markets(args.root.resolve(), args.source_file)
+        else:
+            result = run_fiscal(args.root.resolve(), args.tax_file, args.fiscal_file, args.refresh_history)
     except PipelineError as exc:
         parser.exit(1, f"error: {exc}\n")
     print(json.dumps(result, ensure_ascii=False, indent=2))
