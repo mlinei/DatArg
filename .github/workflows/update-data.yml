@@ -78,6 +78,7 @@ jobs:
         run: |
           aed inflation
           aed wages
+          aed fiscal
 
       - name: Validar pipelines
         run: pytest -q

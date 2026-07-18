@@ -26,6 +26,7 @@ function sourceName(row) {
   if (id.startsWith('indec_')) return 'INDEC';
   if (id.startsWith('bcra_')) return 'BCRA';
   if (id.startsWith('datarg_bcra_')) return 'DatArg sobre fuentes BCRA, FMI y BCE';
+  if (id.startsWith('datarg_mecon_')) return 'DatArg sobre Ministerio de Economía e INDEC';
   if (id.startsWith('mecon_')) return 'Ministerio de Economía';
   if (id.startsWith('argentinadatos_')) return 'ArgentinaDatos';
   if (id.startsWith('yahoo_')) return 'Yahoo Finance / ArgentinaDatos';
@@ -83,7 +84,7 @@ function renderChart(container, rows, chart) {
   const latest = Object.keys(selectedSeries).map((id,i) => { const list=points.filter(p=>p.series_id===id).sort((a,b)=>a.date-b.date); return {id,label:selectedSeries[id],color:COLORS[i],row:list.at(-1)}; }).filter(x=>x.row);
   const xs=points.map(p=>p.date), ys=points.map(p=>p.value); let minX=Math.min(...xs), maxX=Math.max(...xs), minY=Math.min(...ys), maxY=Math.max(...ys);
   if (!points.length) { container.innerHTML='<p class="empty">Sin datos disponibles.</p>'; return; }
-  if (minX===maxX) { minX-=1; maxX+=1; } if(minY===maxY){minY-=1;maxY+=1} const pad=(maxY-minY)*.12; minY-=pad;maxY+=pad;
+  if (minX===maxX) { minX-=1; maxX+=1; } if (chart.includeZero) { minY=Math.min(minY,0); maxY=Math.max(maxY,0); } if(minY===maxY){minY-=1;maxY+=1} const pad=(maxY-minY)*.12; minY-=pad;maxY+=pad;
   const W=900,H=360,L=62,R=18,T=28,B=46; const x=v=>L+(v-minX)/(maxX-minX)*(W-L-R), y=v=>T+(maxY-v)/(maxY-minY)*(H-T-B);
   const ticks=Array.from({length:5},(_,i)=>minY+(maxY-minY)*i/4);
   const paths=latest.map(s=>{const list=points.filter(p=>p.series_id===s.id).sort((a,b)=>a.date-b.date);return `<path class="series-line" stroke="${s.color}" d="${list.map((p,i)=>`${i?'L':'M'}${x(p.date).toFixed(1)},${y(p.value).toFixed(1)}`).join(' ')}"/>`;}).join('');

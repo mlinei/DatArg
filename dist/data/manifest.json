@@ -4,6 +4,7 @@
     "country_risk.csv",
     "emae.csv",
     "exchange_rates.csv",
+    "fiscal.csv",
     "gdp.csv",
     "industry.csv",
     "inflation.csv",
@@ -17,5 +18,5 @@
     "trade.csv",
     "wages.csv"
   ],
-  "generatedAt": "2026-07-18T12:43:55.450Z"
+  "generatedAt": "2026-07-18T15:06:09.918Z"
 }

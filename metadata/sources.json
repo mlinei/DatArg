@@ -172,6 +172,40 @@
       "revision_history": "Analytical publications, not one stable time-series endpoint.",
       "break_risks": ["publication layout", "coverage differs by report"],
       "methodology_notes": "Official secondary validation; do not silently mix into primary dataset."
+    },
+    {
+      "source_id": "mecon_tax_revenue",
+      "organization": "Ministerio de Economía",
+      "module": "fiscal",
+      "series": ["total_tax_revenue_nominal", "total_tax_revenue_real", "total_tax_revenue_real_change"],
+      "landing_url": "https://www.argentina.gob.ar/economia/ingresospublicos/pormes",
+      "resource_url": null,
+      "format": "xls_xlsx",
+      "frequency": "monthly",
+      "available_from": "2017-01",
+      "latest_at_research": "2026-06",
+      "unit": ["million_ars_current", "million_ars_dec_2025", "percent_change"],
+      "automation_type": "automatic",
+      "revision_history": "Annual workbooks may be replaced or corrected.",
+      "break_risks": ["workbook layout change", "landing page link change"],
+      "methodology_notes": "Real values are calculated with the national CPI; nominal official observations are retained."
+    },
+    {
+      "source_id": "mecon_spn_cash_basis",
+      "organization": "Ministerio de Economía",
+      "module": "fiscal",
+      "series": ["primary_result", "financial_result"],
+      "landing_url": "https://www.argentina.gob.ar/economia/sechacienda/infoestadistica",
+      "resource_url": null,
+      "format": "xls_xlsx_zip",
+      "frequency": "monthly",
+      "available_from": "2017-01",
+      "latest_at_research": "2026-06",
+      "unit": ["million_ars_current", "million_ars_dec_2025", "percent_gdp"],
+      "automation_type": "automatic",
+      "revision_history": "Monthly workbooks can revise the comparable prior-year observation.",
+      "break_risks": ["workbook layout change", "archive format change", "landing page link change"],
+      "methodology_notes": "SPN non-financial cash basis. Primary excludes interest; financial includes it."
     }
   ]
 }
