@@ -136,7 +136,7 @@ Importa la estimación documentada de deuda neta consolidada del sector público
 aed public-debt
 ```
 
-Publica por separado la deuda bruta mensual de la Administración Central y los pasivos financieros remunerados del BCRA, ambos en millones de USD. No calcula ni presenta una suma consolidada. La salida queda en `data/processed/public_debt.csv`.
+Publica por separado la deuda bruta de la Administración Central y los pasivos financieros remunerados del BCRA. El nivel del Tesoro incluye cierres anuales desde 2013 y datos mensuales desde 2019; también incorpora la relación oficial deuda/PIB desde 2000. No calcula ni presenta una suma consolidada. La salida queda en `data/processed/public_debt.csv`.
 
 ## Reservas internacionales brutas
 

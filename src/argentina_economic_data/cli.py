@@ -65,6 +65,7 @@ def main(argv: list[str] | None = None) -> int:
     public_debt = sub.add_parser("public-debt", help="ejecuta deuda del Tesoro y pasivos remunerados del BCRA")
     public_debt.add_argument("--root", type=Path, default=Path.cwd())
     public_debt.add_argument("--treasury-file", type=Path, help="XLSX mensual local")
+    public_debt.add_argument("--quarterly-file", type=Path, help="XLSX trimestral con indicadores de sostenibilidad")
     for variable_id in BCRA_VARIABLES: public_debt.add_argument(f"--variable-{variable_id}-file", type=Path)
     reserves = sub.add_parser("reserves", help="ejecuta reservas internacionales brutas del BCRA")
     reserves.add_argument("--root", type=Path, default=Path.cwd())
@@ -109,7 +110,7 @@ def main(argv: list[str] | None = None) -> int:
             result = run_consolidated_debt(args.root.resolve(), args.source_file)
         elif args.command == "public-debt":
             files = {i: getattr(args, f"variable_{i}_file") for i in BCRA_VARIABLES}
-            result = run_public_debt(args.root.resolve(), args.treasury_file, files)
+            result = run_public_debt(args.root.resolve(), args.treasury_file, files, args.quarterly_file)
         elif args.command == "reserves":
             result = run_reserves(args.root.resolve(), args.source_file)
         elif args.command == "net-reserves":

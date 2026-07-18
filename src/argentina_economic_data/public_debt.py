@@ -3,6 +3,7 @@ from __future__ import annotations
 import csv
 import json
 import os
+import re
 import tempfile
 from datetime import date, datetime, timezone
 from decimal import Decimal
@@ -15,6 +16,9 @@ from .inflation import OUTPUT_COLUMNS, Artifact, PipelineError, acquire
 
 TREASURY_ID = "mecon_monthly_gross_central_government_debt"
 TREASURY_URL = "https://www.argentina.gob.ar/sites/default/files/boletin_mensual_31_05_2026_1.xlsx"
+QUARTERLY_ID = "mecon_quarterly_public_debt"
+QUARTERLY_URL = "https://www.argentina.gob.ar/sites/default/files/deuda_publica_31-03-2026.xlsx"
+HISTORICAL_URL = "https://www.argentina.gob.ar/economia/finanzas/datos-trimestrales-de-la-deuda/datos-anteriores"
 BCRA_BASE = "https://api.bcra.gob.ar/estadisticas/v4.0/Monetarias"
 # Pasivos financieros remunerados: letras en ARS y ME, LELIQ/NOTALIQ, pases en ARS
 # y pases pasivos con el exterior. El TC mayorista convierte todo a USD.
@@ -66,6 +70,46 @@ def extract_treasury(artifact: Artifact) -> list[dict[str, str]]:
         if period in seen or value <= 0: raise PipelineError(f"deuda Tesoro: dato inválido en {period}")
         seen.add(period); records.append(_record("mecon_gross_central_government_debt", period, value, artifact))
     if not records or records[0]["period"] != "2019-01": raise PipelineError("deuda Tesoro: cobertura inicial inesperada")
+    return records
+
+
+def extract_historical_levels(path: Path, artifact: Artifact) -> list[dict[str, str]]:
+    records = []
+    with path.open(encoding="utf-8", newline="") as handle:
+        for row in csv.DictReader(handle):
+            record = _record("mecon_gross_central_government_debt", row["period"], Decimal(row["value_million_usd"]), artifact)
+            record.update({"frequency": "annual", "source_id": "mecon_historical_year_end_reports", "source_url": HISTORICAL_URL})
+            records.append(record)
+    if [r["period"] for r in records] != [str(y) for y in range(2013, 2019)]:
+        raise PipelineError("deuda Tesoro: referencia histórica incompleta")
+    return records
+
+
+def extract_gdp_ratio(artifact: Artifact) -> list[dict[str, str]]:
+    try:
+        sheet = pd.read_excel(artifact.path, sheet_name="A.4.7", header=None)
+        labels = sheet.iloc[:, 2].astype(str).str.strip()
+        row = labels[labels.eq("Deuda Bruta de la Administración Central")].index[0]
+    except Exception as exc:
+        raise PipelineError(f"deuda/PBI: libro trimestral ilegible: {exc}") from exc
+    records = []
+    for col in range(3, sheet.shape[1]):
+        label, raw = sheet.iat[7, col], sheet.iat[row, col]
+        if pd.isna(label) or pd.isna(raw): continue
+        text = str(label).strip().lower()
+        year_match = re.search(r"\b(20\d{2})\b", text)
+        if text[:4].isdigit(): period, frequency = text[:4], "annual"
+        elif "trim" in text and year_match:
+            quarter = {"1er.": 1, "2do.": 2, "3er.": 3, "4to.": 4}.get(text.split()[0])
+            if not quarter: continue
+            period, frequency = f"{year_match.group(1)}-Q{quarter}", "quarterly"
+        else: continue
+        value = Decimal(str(raw)) * Decimal(100)
+        record = _record("mecon_gross_central_government_debt_gdp_ratio", period, value, artifact)
+        record.update({"frequency": frequency, "unit": "percent_gdp"})
+        records.append(record)
+    if not records or records[0]["period"] != "2000" or Decimal(records[-1]["value"]) <= 0:
+        raise PipelineError("deuda/PBI: cobertura inesperada")
     return records
 
 
@@ -144,7 +188,7 @@ def promote(records: list[dict[str, str]], root: Path, run_id: str) -> dict[str,
         with target.open(encoding="utf-8", newline="") as h: old = {(r["series_id"], r["period"]): r["value"] for r in csv.DictReader(h)}
     new = {(r["series_id"], r["period"]): r["value"] for r in records}
     coverage = {sid: {"from": min(r["period"] for r in records if r["series_id"] == sid), "through": max(r["period"] for r in records if r["series_id"] == sid)} for sid in sorted({r["series_id"] for r in records})}
-    report = {"run_id": run_id, "rows": len(records), "series": 2, "coverage": coverage, "created": len(new.keys()-old.keys()), "deleted": len(old.keys()-new.keys()), "modified": sum(old[k] != new[k] for k in old.keys() & new.keys())}
+    report = {"run_id": run_id, "rows": len(records), "series": len(coverage), "coverage": coverage, "created": len(new.keys()-old.keys()), "deleted": len(old.keys()-new.keys()), "modified": sum(old[k] != new[k] for k in old.keys() & new.keys())}
     deleted_keys = old.keys() - new.keys()
     current_month = datetime.now(timezone.utc).strftime("%Y-%m")
     if old and any(period != current_month for _series, period in deleted_keys):
@@ -160,10 +204,12 @@ def promote(records: list[dict[str, str]], root: Path, run_id: str) -> dict[str,
     return report
 
 
-def run(root: Path, treasury_file: Path | None = None, bcra_files: dict[int, Path | None] | None = None) -> dict[str, object]:
+def run(root: Path, treasury_file: Path | None = None, bcra_files: dict[int, Path | None] | None = None, quarterly_file: Path | None = None) -> dict[str, object]:
     run_id = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ"); raw = root/"data"/"raw"
     treasury = acquire(TREASURY_ID, TREASURY_URL, raw, treasury_file)
+    quarterly = acquire(QUARTERLY_ID, QUARTERLY_URL, raw, quarterly_file)
     artifacts = {}; series = {}; bcra_files = bcra_files or {}
     for variable_id in BCRA_VARIABLES:
         artifacts[variable_id], series[variable_id] = _acquire_bcra(raw, variable_id, bcra_files.get(variable_id))
-    return promote(extract_treasury(treasury) + calculate_bcra_monthly(series, artifacts), root, run_id)
+    historical = extract_historical_levels(root/"data"/"reference"/"public_debt_historical.csv", quarterly)
+    return promote(historical + extract_treasury(treasury) + extract_gdp_ratio(quarterly) + calculate_bcra_monthly(series, artifacts), root, run_id)

@@ -52,6 +52,7 @@ function chartSeries(chart) {
   }
   if (chart.metricToggle) {
     const metric = state.get(chart) || chart.metricToggle.default;
+    if (chart.metricToggle.seriesByMetric) return chart.metricToggle.seriesByMetric[metric];
     return Object.fromEntries(Object.entries(chart.series).map(([id, label]) => [id.replace('{metric}', metric), label]));
   }
   return chart.series;
@@ -75,7 +76,7 @@ function renderChart(container, rows, chart) {
   const selectedSeries = Object.fromEntries(Object.entries(availableSeries).filter(([id])=>visible.has(id)));
   const compositeState = chart.composite ? (state.get(chart) || { sector: chart.composite.defaultSector, metric: chart.composite.defaultMetric }) : null;
   const toggleMetric = chart.metricToggle ? (state.get(chart) || chart.metricToggle.default) : null;
-  const displayUnit = (chart.composite && compositeState.metric === 'yoy') || toggleMetric === 'mom' ? '%' : chart.unit;
+  const displayUnit = chart.metricToggle?.units?.[toggleMetric] || ((chart.composite && compositeState.metric === 'yoy') || toggleMetric === 'mom' ? '%' : chart.unit);
   const allSelectedPoints = rows.filter(r => selectedSeries[r.series_id]).map(r => ({...r, date:+periodDate(r.period), value:+r.value})).filter(r=>Number.isFinite(r.value)).sort((a,b)=>a.date-b.date);
   const coverageDates = [...new Set(allSelectedPoints.map(p=>p.date))];
   const points = filterRange(allSelectedPoints, range, container.dataset.from, container.dataset.to);

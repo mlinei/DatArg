@@ -82,7 +82,7 @@ export const sections = [
   },
   {
     id: 'reservas-netas', eyebrow: 'SECTOR EXTERNO', title: 'Reservas internacionales netas', intro: 'Reconstrucción diaria de los activos de reserva disponibles luego de descontar encajes, swap con China, obligaciones con organismos internacionales y repos a un año.', file: 'net_reserves.csv',
-    warning: 'Serie calculada por DatArg, no publicada oficialmente por el BCRA. Combina datos diarios, semanales y mensuales; entre publicaciones se arrastra o estima el último componente disponible y luego se recalibra. Los cortes del 30/06/2026 y 17/07/2026 fueron contrastados con la estimación de Federico Machado.',
+    warning: 'Serie calculada por DatArg, no publicada oficialmente por el BCRA. Combina datos diarios, semanales y mensuales; entre publicaciones se arrastra o estima el último componente disponible y luego se recalibra.',
     charts: [
       { title: 'Reservas netas', subtitle: 'Millones de dólares; definición corriente de mercado', unit: 'USD M', series: { bcra_net_international_reserves: 'Reservas netas' }},
       { title: 'Deducciones de las reservas brutas', subtitle: 'Componentes descontados, en millones de dólares', unit: 'USD M', series: { bcra_reserve_requirements_fx: 'Encajes', bcra_china_swap: 'Swap China', bcra_international_organizations_liability: 'OOII', bcra_repos_up_to_one_year: 'Repos ≤ 1 año' }}
@@ -108,7 +108,7 @@ export const sections = [
   {
     id: 'deuda', eyebrow: 'FINANZAS PÚBLICAS', title: 'Deuda pública', intro: 'Dos magnitudes separadas: deuda bruta de la Administración Central y pasivos financieros seleccionados del BCRA.', file: 'public_debt.csv', warning: 'Las series no se suman ni equivalen a deuda neta consolidada. Los pasivos seleccionados del BCRA incluyen LEBAC, NOBAC y otras letras emitidas en pesos y moneda extranjera; LELIQ y NOTALIQ; pases pasivos en pesos; y pases pasivos o REPO en dólares con el exterior. Los componentes en pesos se convierten al dólar mayorista de cierre mensual.',
     charts: [
-      { title: 'Deuda bruta del Tesoro', subtitle: 'Administración Central, millones de USD', unit: 'USD M', series: { mecon_gross_central_government_debt: 'Tesoro' }},
+      { title: 'Deuda bruta del Tesoro', subtitle: 'Administración Central; nivel en USD o proporción del PIB', unit: 'USD M', metricToggle: { default: 'usd', labels: { usd: 'Millones de USD', gdp: 'Porcentaje del PIB' }, units: { usd: 'USD M', gdp: '%' }, seriesByMetric: { usd: { mecon_gross_central_government_debt: 'Tesoro' }, gdp: { mecon_gross_central_government_debt_gdp_ratio: 'Tesoro' } } }, series: { mecon_gross_central_government_debt: 'Tesoro' }},
       { title: 'Pasivos seleccionados del BCRA', subtitle: 'Instrumentos remunerados convertidos a USD', unit: 'USD M', series: { bcra_interest_bearing_liabilities: 'BCRA' }}
     ]
   }
