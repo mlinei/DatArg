@@ -25,6 +25,7 @@ function sourceName(row) {
   const id = row?.source_id || '';
   if (id.startsWith('indec_')) return 'INDEC';
   if (id.startsWith('bcra_')) return 'BCRA';
+  if (id.startsWith('datarg_bcra_')) return 'DatArg sobre fuentes BCRA, FMI y BCE';
   if (id.startsWith('mecon_')) return 'Ministerio de Economía';
   if (id.startsWith('argentinadatos_')) return 'ArgentinaDatos';
   if (id.startsWith('yahoo_')) return 'Yahoo Finance / ArgentinaDatos';

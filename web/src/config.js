@@ -81,6 +81,14 @@ export const sections = [
     charts: [{ title: 'Reservas brutas del BCRA', subtitle: 'Millones de dólares; cifras oficiales provisorias', unit: 'USD M', defaultRange: '5Y', series: { bcra_gross_international_reserves: 'Reservas brutas' }}]
   },
   {
+    id: 'reservas-netas', eyebrow: 'SECTOR EXTERNO', title: 'Reservas internacionales netas', intro: 'Reconstrucción diaria de los activos de reserva disponibles luego de descontar encajes, swap con China, obligaciones con organismos internacionales y repos a un año.', file: 'net_reserves.csv',
+    warning: 'Serie calculada por DatArg, no publicada oficialmente por el BCRA. Combina datos diarios, semanales y mensuales; entre publicaciones se arrastra o estima el último componente disponible y luego se recalibra. Los cortes del 30/06/2026 y 17/07/2026 fueron contrastados con la estimación de Federico Machado.',
+    charts: [
+      { title: 'Reservas netas', subtitle: 'Millones de dólares; definición corriente de mercado', unit: 'USD M', series: { bcra_net_international_reserves: 'Reservas netas' }},
+      { title: 'Deducciones de las reservas brutas', subtitle: 'Componentes descontados, en millones de dólares', unit: 'USD M', series: { bcra_reserve_requirements_fx: 'Encajes', bcra_china_swap: 'Swap China', bcra_international_organizations_liability: 'OOII', bcra_repos_up_to_one_year: 'Repos ≤ 1 año' }}
+    ]
+  },
+  {
     id: 'dolar', eyebrow: 'MERCADO CAMBIARIO', title: 'Tipos de cambio', intro: 'Cotizaciones históricas de venta del dólar oficial, blue, MEP y contado con liquidación.', file: 'exchange_rates.csv',
     charts: [{ title: 'Dólar por mercado', subtitle: 'Pesos argentinos por dólar', unit: 'ARS/USD', defaultRange: '5Y', series: { argentinadatos_usd_official_retail_sell: 'Oficial', argentinadatos_usd_blue_sell: 'Blue', argentinadatos_usd_mep_sell: 'MEP', argentinadatos_usd_ccl_sell: 'CCL' }}]
   },

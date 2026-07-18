@@ -19,6 +19,7 @@ from .public_debt import BCRA_VARIABLES, run as run_public_debt
 from .reserves import run as run_reserves
 from .wages import run as run_wages
 from .markets import run as run_markets
+from .net_reserves import run as run_net_reserves
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -68,6 +69,12 @@ def main(argv: list[str] | None = None) -> int:
     reserves = sub.add_parser("reserves", help="ejecuta reservas internacionales brutas del BCRA")
     reserves.add_argument("--root", type=Path, default=Path.cwd())
     reserves.add_argument("--source-file", type=Path)
+    net_reserves = sub.add_parser("net-reserves", help="reconstruye reservas internacionales netas")
+    net_reserves.add_argument("--root", type=Path, default=Path.cwd())
+    net_reserves.add_argument("--weekly-file", type=Path)
+    net_reserves.add_argument("--flow-file", type=Path)
+    net_reserves.add_argument("--cny-file", type=Path)
+    net_reserves.add_argument("--usd-file", type=Path)
     wages = sub.add_parser("wages", help="ejecuta salarios nominales y reales por sector")
     wages.add_argument("--root", type=Path, default=Path.cwd())
     wages.add_argument("--source-file", type=Path)
@@ -105,6 +112,8 @@ def main(argv: list[str] | None = None) -> int:
             result = run_public_debt(args.root.resolve(), args.treasury_file, files)
         elif args.command == "reserves":
             result = run_reserves(args.root.resolve(), args.source_file)
+        elif args.command == "net-reserves":
+            result = run_net_reserves(args.root.resolve(), args.weekly_file, args.flow_file, args.cny_file, args.usd_file)
         elif args.command == "wages":
             result = run_wages(args.root.resolve(), args.source_file)
         else:

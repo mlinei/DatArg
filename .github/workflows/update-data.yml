@@ -67,6 +67,7 @@ jobs:
         if: steps.frequency.outputs.scope == 'daily' || steps.frequency.outputs.scope == 'all'
         run: |
           aed reserves
+          aed net-reserves
           aed exchange-rates
           aed markets
           aed country-risk

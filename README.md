@@ -89,6 +89,15 @@ aed exchange-rates
 
 Importa cotizaciones diarias de venta del dólar oficial minorista, blue, MEP y CCL. La salida queda en `data/processed/exchange_rates.csv`.
 
+## Reservas internacionales netas
+
+```bash
+aed reserves
+aed net-reserves
+```
+
+Reconstruye desde diciembre de 2023 las reservas netas descontando encajes, el swap con China, obligaciones con organismos internacionales y repos con vencimiento residual de hasta un año. Publica además cada componente en `data/processed/net_reserves.csv`. Es una serie calculada por DatArg y no una estadística oficial del BCRA.
+
 ## S&P Merval en dólares
 
 ```bash
