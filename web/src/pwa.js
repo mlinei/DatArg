@@ -1,5 +1,10 @@
+import { Browser } from '@capacitor/browser';
+import { Capacitor } from '@capacitor/core';
+import { Network } from '@capacitor/network';
+import { StatusBar, Style } from '@capacitor/status-bar';
+
 function standalone() {
-  return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+  return Capacitor.isNativePlatform() || window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
 }
 
 function connectionBanner() {
@@ -20,21 +25,39 @@ function connectionBanner() {
 export function setupPWA() {
   const announce = connectionBanner();
   const installButton = document.querySelector('#install-app');
+  const nativeRuntime = Capacitor.isNativePlatform();
   let installPrompt;
 
-  const updateConnection = () => {
-    if (navigator.onLine) announce('Conexión restablecida');
+  const updateConnection = (connected = navigator.onLine) => {
+    if (connected) announce('Conexión restablecida');
     else announce('Sin conexión · usando los últimos datos guardados', true);
   };
-  window.addEventListener('online', updateConnection);
-  window.addEventListener('offline', updateConnection);
-  if (!navigator.onLine) updateConnection();
+
+  if (nativeRuntime) {
+    document.documentElement.classList.add('native-app');
+    void StatusBar.setStyle({ style: Style.Light }).catch(() => {});
+    void StatusBar.setBackgroundColor({ color: '#06101f' }).catch(() => {});
+    void StatusBar.setOverlaysWebView({ overlay: false }).catch(() => {});
+    void Network.getStatus().then(status => updateConnection(status.connected));
+    void Network.addListener('networkStatusChange', status => updateConnection(status.connected));
+    document.addEventListener('click', event => {
+      const target = event.target instanceof Element ? event.target : null;
+      const link = target?.closest('a[target="_blank"]');
+      if (!link || !/^https?:/.test(link.href)) return;
+      event.preventDefault();
+      void Browser.open({ url: link.href });
+    });
+  } else {
+    window.addEventListener('online', () => updateConnection(true));
+    window.addEventListener('offline', () => updateConnection(false));
+    if (!navigator.onLine) updateConnection(false);
+  }
 
   window.addEventListener('datarg:data-source', event => {
     if (event.detail?.source === 'device') announce('Mostrando la última copia guardada en este dispositivo', true);
   });
 
-  if ('serviceWorker' in navigator && import.meta.env.PROD) {
+  if (!nativeRuntime && 'serviceWorker' in navigator && import.meta.env.PROD) {
     window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(() => {}));
   }
 

@@ -1,8 +1,9 @@
+import { Capacitor } from '@capacitor/core';
+
 const memory = new Map();
 const DB_NAME = 'datarg-data-cache';
 const STORE_NAME = 'datasets';
-const NATIVE_PROTOCOLS = new Set(['capacitor:', 'ionic:']);
-const nativeRuntime = NATIVE_PROTOCOLS.has(window.location.protocol) || Boolean(window.Capacitor?.isNativePlatform?.());
+const nativeRuntime = Capacitor.isNativePlatform();
 const configuredBase = import.meta.env.VITE_DATA_BASE_URL?.replace(/\/$/, '');
 const DATA_BASE = configuredBase || (nativeRuntime ? 'https://dat-arg.vercel.app/data' : '/data');
 

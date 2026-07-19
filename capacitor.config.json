@@ -1,0 +1,22 @@
+{
+  "appId": "com.mlinei.datarg",
+  "appName": "DatArg",
+  "webDir": "dist",
+  "backgroundColor": "#06101f",
+  "server": {
+    "androidScheme": "https"
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchAutoHide": true,
+      "launchShowDuration": 1600,
+      "backgroundColor": "#06101fff",
+      "showSpinner": false
+    },
+    "StatusBar": {
+      "style": "LIGHT",
+      "backgroundColor": "#06101f",
+      "overlaysWebView": false
+    }
+  }
+}
