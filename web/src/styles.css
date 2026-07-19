@@ -5,9 +5,9 @@ html{scroll-behavior:smooth}
 body{margin:0;background:var(--bg);color:var(--text);font-family:Manrope,system-ui,sans-serif}
 body:before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.25;background-image:linear-gradient(rgba(255,255,255,.018) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.018) 1px,transparent 1px);background-size:64px 64px}
 .topbar{height:72px;position:sticky;top:0;z-index:20;display:flex;align-items:center;padding:0 4vw;background:rgba(6,16,31,.88);backdrop-filter:blur(18px);border-bottom:1px solid var(--line)}
-.brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:var(--text);min-width:190px}
-.brand>span{width:38px;height:38px;display:grid;place-items:center;border:1px solid var(--green);color:var(--green);font:500 12px DM Mono}
-.brand b{font-size:12px;line-height:1.15;text-transform:uppercase;letter-spacing:.08em}
+.brand{display:flex;align-items:center;text-decoration:none;color:var(--text);min-width:190px}
+.brand-logo{position:relative;display:block;width:84px;height:58px;overflow:hidden;flex:0 0 auto}
+.brand-logo img{position:absolute;width:129px;height:129px;max-width:none;left:-23px;top:-32px}
 .graph-picker{position:relative;flex:1;max-width:250px}
 .graph-picker>button{width:100%;display:flex;align-items:center;justify-content:space-between;gap:18px;background:rgba(13,32,56,.85);border:1px solid var(--line);color:var(--text);padding:11px 14px;font:400 10px DM Mono;text-transform:uppercase;letter-spacing:.05em;cursor:pointer}
 .graph-picker>button span{color:var(--green);font-size:16px;transition:transform .2s}
@@ -80,6 +80,8 @@ svg text{fill:#698077;font:400 10px DM Mono}
 .ranges button.active{background:var(--green);color:#06101f}
 .empty{color:var(--muted);font:400 12px DM Mono}
 footer{padding:60px 7vw;display:flex;justify-content:space-between;align-items:center;color:var(--muted);font-size:12px}
+footer .brand-logo{width:102px;height:71px}
+footer .brand-logo img{width:158px;height:158px;left:-28px;top:-40px}
 footer a{color:var(--green);text-decoration:none;font:400 11px DM Mono}
 @media(max-width:900px){.brand{min-width:150px}
 .live{margin-left:auto}
@@ -105,7 +107,8 @@ footer{flex-direction:column;align-items:start;gap:25px}
 .ranges button{flex:1}
 .topbar{padding:0 5vw}
 .topbar .brand{min-width:0;margin-right:12px}
-.topbar .brand b{display:none}
+.topbar .brand-logo{width:78px;height:54px}
+.topbar .brand-logo img{width:120px;height:120px;left:-21px;top:-30px}
 .graph-picker{max-width:none}
 .live{display:none}
 }
