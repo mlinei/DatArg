@@ -27,6 +27,7 @@ function sourceName(row) {
   if (id.startsWith('bcra_')) return 'BCRA';
   if (id.startsWith('datarg_bcra_')) return 'DatArg sobre fuentes BCRA, FMI y BCE';
   if (id.startsWith('datarg_mecon_')) return 'DatArg sobre Ministerio de Economía e INDEC';
+  if (id.startsWith('jgm_')) return 'Jefatura de Gabinete / DNIP';
   if (id.startsWith('mecon_')) return 'Ministerio de Economía';
   if (id.startsWith('argentinadatos_')) return 'ArgentinaDatos';
   if (id.startsWith('yahoo_')) return 'Yahoo Finance / ArgentinaDatos';
@@ -43,7 +44,8 @@ function periodDate(p) {
 function chartSeries(chart) {
   if (chart.composite) {
     const current = state.get(chart) || { sector: chart.composite.defaultSector, metric: chart.composite.defaultMetric };
-    return { [`indec_industry_${current.sector}_${current.metric}`]: chart.composite.sectors[current.sector] };
+    const pattern = chart.composite.seriesPattern || 'indec_industry_{sector}_{metric}';
+    return { [pattern.replace('{sector}', current.sector).replace('{metric}', current.metric)]: chart.composite.sectors[current.sector] };
   }
   if (chart.selector) { const selected = state.get(chart) || chart.selected || Object.keys(chart.selector)[0]; return {[selected]: chart.selector[selected]}; }
   if (chart.regionSelector) {
@@ -77,7 +79,7 @@ function renderChart(container, rows, chart) {
   const selectedSeries = Object.fromEntries(Object.entries(availableSeries).filter(([id])=>visible.has(id)));
   const compositeState = chart.composite ? (state.get(chart) || { sector: chart.composite.defaultSector, metric: chart.composite.defaultMetric }) : null;
   const toggleMetric = chart.metricToggle ? (state.get(chart) || chart.metricToggle.default) : null;
-  const displayUnit = chart.metricToggle?.units?.[toggleMetric] || ((chart.composite && compositeState.metric === 'yoy') || toggleMetric === 'mom' ? '%' : chart.unit);
+  const displayUnit = chart.metricToggle?.units?.[toggleMetric] || chart.composite?.units?.[compositeState?.metric] || ((chart.composite && compositeState.metric === 'yoy') || toggleMetric === 'mom' ? '%' : chart.unit);
   const allSelectedPoints = rows.filter(r => selectedSeries[r.series_id]).map(r => ({...r, date:+periodDate(r.period), value:+r.value})).filter(r=>Number.isFinite(r.value)).sort((a,b)=>a.date-b.date);
   const coverageDates = [...new Set(allSelectedPoints.map(p=>p.date))];
   const points = filterRange(allSelectedPoints, range, container.dataset.from, container.dataset.to);
@@ -88,7 +90,7 @@ function renderChart(container, rows, chart) {
   const W=900,H=360,L=62,R=18,T=28,B=46; const x=v=>L+(v-minX)/(maxX-minX)*(W-L-R), y=v=>T+(maxY-v)/(maxY-minY)*(H-T-B);
   const ticks=Array.from({length:5},(_,i)=>minY+(maxY-minY)*i/4);
   const paths=latest.map(s=>{const list=points.filter(p=>p.series_id===s.id).sort((a,b)=>a.date-b.date);return `<path class="series-line" stroke="${s.color}" d="${list.map((p,i)=>`${i?'L':'M'}${x(p.date).toFixed(1)},${y(p.value).toFixed(1)}`).join(' ')}"/>`;}).join('');
-  const titleControls = chart.composite ? `<div class="chart-selectors"><label>Vista<select class="metric-select">${Object.entries(chart.composite.metrics).map(([k,v])=>`<option value="${k}" ${compositeState.metric===k?'selected':''}>${v}</option>`).join('')}</select></label><label>Rama<select class="sector-select">${Object.entries(chart.composite.sectors).map(([k,v])=>`<option value="${k}" ${compositeState.sector===k?'selected':''}>${v}</option>`).join('')}</select></label></div>` : chart.metricToggle ? `<div class="chart-selectors"><label>Vista<select class="toggle-metric-select">${Object.entries(chart.metricToggle.labels).map(([k,v])=>`<option value="${k}" ${toggleMetric===k?'selected':''}>${v}</option>`).join('')}</select></label></div>` : chart.selector ? `<select class="chart-select">${Object.entries(chart.selector).map(([k,v])=>`<option value="${k}" ${(state.get(chart)||chart.selected)===k?'selected':''}>${v}</option>`).join('')}</select>` : chart.regionSelector ? `<select class="chart-select">${Object.entries(chart.regionSelector).map(([k,v])=>`<option value="${k}" ${(state.get(chart)||chart.region)===k?'selected':''}>${v}</option>`).join('')}</select>`:'';
+  const titleControls = chart.composite ? `<div class="chart-selectors"><label>Vista<select class="metric-select">${Object.entries(chart.composite.metrics).map(([k,v])=>`<option value="${k}" ${compositeState.metric===k?'selected':''}>${v}</option>`).join('')}</select></label><label>${chart.composite.dimensionLabel || 'Rama'}<select class="sector-select">${Object.entries(chart.composite.sectors).map(([k,v])=>`<option value="${k}" ${compositeState.sector===k?'selected':''}>${v}</option>`).join('')}</select></label></div>` : chart.metricToggle ? `<div class="chart-selectors"><label>Vista<select class="toggle-metric-select">${Object.entries(chart.metricToggle.labels).map(([k,v])=>`<option value="${k}" ${toggleMetric===k?'selected':''}>${v}</option>`).join('')}</select></label></div>` : chart.selector ? `<select class="chart-select">${Object.entries(chart.selector).map(([k,v])=>`<option value="${k}" ${(state.get(chart)||chart.selected)===k?'selected':''}>${v}</option>`).join('')}</select>` : chart.regionSelector ? `<select class="chart-select">${Object.entries(chart.regionSelector).map(([k,v])=>`<option value="${k}" ${(state.get(chart)||chart.region)===k?'selected':''}>${v}</option>`).join('')}</select>`:'';
   const sources = [...new Map(allSelectedPoints.map(row => [sourceName(row), row])).values()].filter(row=>row.source_url);
   const firstCoverage = coverageDates[0], lastCoverage = coverageDates.at(-1);
   const activeFrom = container.dataset.from ? +new Date(`${container.dataset.from}-01T00:00:00Z`) : (points[0]?.date ?? firstCoverage);

@@ -130,6 +130,14 @@ aed fiscal
 
 Importa la recaudación tributaria y los resultados primario y financiero mensuales del Sector Público Nacional no Financiero desde 2017. Conserva los niveles nominales, calcula niveles a precios de diciembre de 2025 y variaciones reales con el IPC nacional, y agrega vistas anuales reales y como porcentaje del PIB. La salida queda en `data/processed/fiscal.csv`. La primera reconstrucción completa puede repetirse con `aed fiscal --refresh-history`.
 
+## Inversión pública y gastos de capital
+
+```bash
+aed public-investment
+```
+
+Importa las series anuales oficiales de inversión pública de la Administración Pública Nacional desde 1995 y de gastos de capital del Sector Público Nacional desde 1997. Publica el nivel real con base 2019=100, el porcentaje del PIB y la composición funcional disponible. Excluye las columnas proyectadas de 2026. La salida queda en `data/processed/public_investment.csv`.
+
 ## Deuda neta consolidada
 
 ```bash
@@ -160,4 +168,4 @@ make test
 
 ## Actualizaciones automáticas
 
-GitHub Actions consulta las series diarias y mensuales —incluidas recaudación y cuentas fiscales— en días hábiles, y solo guarda cambios reales después de ejecutar las validaciones y reconstruir DatArg. La configuración y la operación manual están documentadas en `docs/automatic_updates.md`.
+GitHub Actions consulta las series diarias, mensuales y la última planilla anual de inversión pública en días hábiles, y solo guarda cambios reales después de ejecutar las validaciones y reconstruir DatArg. La configuración y la operación manual están documentadas en `docs/automatic_updates.md`.
