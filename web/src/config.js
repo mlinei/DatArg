@@ -25,6 +25,15 @@ const wages = {
   total: 'Total', total_registered: 'Total registrado', private_registered: 'Privado registrado',
   public: 'Sector público', private_unregistered: 'Privado no registrado'
 };
+const publicInvestmentFunctions = {
+  transport: 'Transporte', energy_mining: 'Energía y minería', water_sanitation: 'Agua y saneamiento',
+  housing_urbanism: 'Vivienda y urbanismo', science_technology: 'Ciencia y técnica',
+  education_culture: 'Educación y cultura', health: 'Salud', defense: 'Defensa'
+};
+const capitalExpenditureFunctions = {
+  energy: 'Energía', transport: 'Transporte', education: 'Educación',
+  housing: 'Vivienda', water: 'Agua', other: 'Otros y fondos fiduciarios'
+};
 
 export const sections = [
   {
@@ -111,6 +120,16 @@ export const sections = [
     charts: [
       { title: 'Recaudación tributaria', subtitle: 'Elegí entre crecimiento real, nivel real y valores nominales', unit: '%', metricToggle: { default: 'real_yoy', labels: { real_yoy: 'Variación real interanual', real_monthly: 'Nivel real mensual', annual_yoy: 'Variación real anual', real_annual: 'Nivel real anual', nominal: 'Nivel nominal mensual' }, units: { real_yoy: '%', real_monthly: 'M ARS dic-25', annual_yoy: '%', real_annual: 'M ARS dic-25', nominal: 'M ARS' }, seriesByMetric: { real_yoy: { mecon_tax_revenue_total_real_yoy: 'Recaudación total' }, real_monthly: { mecon_tax_revenue_total_real_monthly: 'Recaudación total' }, annual_yoy: { mecon_tax_revenue_total_real_annual_yoy: 'Recaudación total' }, real_annual: { mecon_tax_revenue_total_real_annual: 'Recaudación total' }, nominal: { mecon_tax_revenue_total_nominal_monthly: 'Recaudación total' } } }, series: { mecon_tax_revenue_total_real_yoy: 'Recaudación total' } },
       { title: 'Resultado fiscal', subtitle: 'Resultado primario y financiero del SPN', unit: 'M ARS dic-25', includeZero: true, metricToggle: { default: 'real_monthly', labels: { real_monthly: 'Mensual real', nominal: 'Mensual nominal', real_annual: 'Anual real', gdp: 'Anual como % del PIB' }, units: { real_monthly: 'M ARS dic-25', nominal: 'M ARS', real_annual: 'M ARS dic-25', gdp: '%' }, seriesByMetric: { real_monthly: { mecon_fiscal_primary_real_monthly: 'Resultado primario', mecon_fiscal_financial_real_monthly: 'Resultado financiero' }, nominal: { mecon_fiscal_primary_nominal_monthly: 'Resultado primario', mecon_fiscal_financial_nominal_monthly: 'Resultado financiero' }, real_annual: { mecon_fiscal_primary_real_annual: 'Resultado primario', mecon_fiscal_financial_real_annual: 'Resultado financiero' }, gdp: { mecon_fiscal_primary_annual_gdp: 'Resultado primario', mecon_fiscal_financial_annual_gdp: 'Resultado financiero' } } }, series: { mecon_fiscal_primary_real_monthly: 'Resultado primario', mecon_fiscal_financial_real_monthly: 'Resultado financiero' } }
+    ]
+  },
+  {
+    id: 'inversion-publica', eyebrow: 'FINANZAS PÚBLICAS', title: 'Inversión pública', intro: 'Evolución anual de la inversión pública nacional y su composición funcional.', file: 'public_investment.csv',
+    warning: 'La inversión pública corresponde a la Administración Pública Nacional y se mide por devengado. Los gastos de capital corresponden al Sector Público Nacional y se miden por base caja, por lo que ambas series no son idénticas. Se excluyen las proyecciones y créditos vigentes de 2026 para mostrar únicamente años ejecutados.',
+    charts: [
+      { title: 'Inversión pública nacional', subtitle: 'Nivel real con 2019=100 o porcentaje del PIB', unit: 'índice', metricToggle: { default: 'real_index', labels: { real_index: 'Nivel real (2019=100)', gdp_ratio: 'Porcentaje del PIB' }, units: { real_index: 'índice', gdp_ratio: '%' }, seriesByMetric: { real_index: { jgm_public_investment_real_index: 'Inversión pública' }, gdp_ratio: { jgm_public_investment_gdp_ratio: 'Inversión pública' } } }, series: { jgm_public_investment_real_index: 'Inversión pública' } },
+      { title: 'Componentes de la inversión pública', subtitle: 'Elegí una función y compará su nivel real o peso en el PIB', unit: 'índice', composite: { sectors: publicInvestmentFunctions, metrics: { real_index: 'Nivel real (2019=100)', gdp_ratio: 'Porcentaje del PIB' }, units: { real_index: 'índice', gdp_ratio: '%' }, seriesPattern: 'jgm_public_investment_function_{metric}_{sector}', dimensionLabel: 'Función', defaultSector: 'transport', defaultMetric: 'real_index' } },
+      { title: 'Gastos de capital del SPN', subtitle: 'Ejecución base caja; nivel real con 2019=100 o porcentaje del PIB', unit: 'índice', metricToggle: { default: 'real_index', labels: { real_index: 'Nivel real (2019=100)', gdp_ratio: 'Porcentaje del PIB' }, units: { real_index: 'índice', gdp_ratio: '%' }, seriesByMetric: { real_index: { jgm_capital_expenditure_real_index: 'Gastos de capital' }, gdp_ratio: { jgm_capital_expenditure_gdp_ratio: 'Gastos de capital' } } }, series: { jgm_capital_expenditure_real_index: 'Gastos de capital' } },
+      { title: 'Componentes del gasto de capital', subtitle: 'Apertura funcional disponible desde 2016', unit: 'índice', composite: { sectors: capitalExpenditureFunctions, metrics: { real_index: 'Nivel real (2019=100)', gdp_ratio: 'Porcentaje del PIB' }, units: { real_index: 'índice', gdp_ratio: '%' }, seriesPattern: 'jgm_capital_expenditure_function_{metric}_{sector}', dimensionLabel: 'Función', defaultSector: 'energy', defaultMetric: 'real_index' } }
     ]
   },
   {

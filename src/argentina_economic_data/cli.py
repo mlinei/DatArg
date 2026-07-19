@@ -21,6 +21,7 @@ from .wages import run as run_wages
 from .markets import run as run_markets
 from .net_reserves import run as run_net_reserves
 from .fiscal import run as run_fiscal
+from .public_investment import run as run_public_investment
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -88,6 +89,9 @@ def main(argv: list[str] | None = None) -> int:
     fiscal.add_argument("--tax-file", type=Path, action="append", help="planilla de recaudación local; repetible")
     fiscal.add_argument("--fiscal-file", type=Path, action="append", help="planilla o ZIP fiscal local; repetible")
     fiscal.add_argument("--refresh-history", action="store_true", help="reconstruye el historial oficial desde 2017")
+    public_investment = sub.add_parser("public-investment", help="ejecuta inversión pública y gastos de capital")
+    public_investment.add_argument("--root", type=Path, default=Path.cwd())
+    public_investment.add_argument("--source-file", type=Path, help="planilla oficial local")
     args = parser.parse_args(argv)
     try:
         if args.command == "inflation":
@@ -125,8 +129,10 @@ def main(argv: list[str] | None = None) -> int:
             result = run_wages(args.root.resolve(), args.source_file)
         elif args.command == "markets":
             result = run_markets(args.root.resolve(), args.source_file)
-        else:
+        elif args.command == "fiscal":
             result = run_fiscal(args.root.resolve(), args.tax_file, args.fiscal_file, args.refresh_history)
+        else:
+            result = run_public_investment(args.root.resolve(), args.source_file)
     except PipelineError as exc:
         parser.exit(1, f"error: {exc}\n")
     print(json.dumps(result, ensure_ascii=False, indent=2))

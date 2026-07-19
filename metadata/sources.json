@@ -206,6 +206,23 @@
       "revision_history": "Monthly workbooks can revise the comparable prior-year observation.",
       "break_risks": ["workbook layout change", "archive format change", "landing page link change"],
       "methodology_notes": "SPN non-financial cash basis. Primary excludes interest; financial includes it."
+    },
+    {
+      "source_id": "jgm_public_investment_series",
+      "organization": "Jefatura de Gabinete de Ministros - Dirección Nacional de Inversión Pública",
+      "module": "public_investment",
+      "series": ["public_investment_total", "public_investment_by_function", "capital_expenditure_total", "capital_expenditure_by_function"],
+      "landing_url": "https://www.argentina.gob.ar/jefatura/presupuestaria/inversion-publica/portal-de-datos-de-inversion-publica",
+      "resource_url": null,
+      "format": "xlsx",
+      "frequency": "annual",
+      "available_from": "1995",
+      "latest_at_research": "2025",
+      "unit": ["index_2019_100", "percent_gdp"],
+      "automation_type": "automatic",
+      "revision_history": "La planilla puede revisar años previos y agregar estimaciones o créditos vigentes del año en curso.",
+      "break_risks": ["workbook layout change", "landing page link change", "functional classification change"],
+      "methodology_notes": "La inversión pública de la APN se publica por devengado; el gasto de capital del SPN, por base caja. DatArg excluye años marcados como proyección."
     }
   ]
 }
