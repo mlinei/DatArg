@@ -1,18 +1,10 @@
 import './styles.css';
 import { sections, COLORS } from './config.js';
+import { loadDataset } from './data-client.js';
+import { setupPWA } from './pwa.js';
 
-const cache = new Map();
 const state = new Map();
 const visibility = new Map();
-
-function parseCSV(text) {
-  const lines = text.trim().split(/\r?\n/); const headers = lines.shift().split(',');
-  return lines.map(line => { const cells = line.split(','); return Object.fromEntries(headers.map((h,i) => [h, cells[i]])); });
-}
-async function load(file) {
-  if (!cache.has(file)) cache.set(file, fetch(`/data/${file}`).then(r => { if (!r.ok) throw new Error(file); return r.text(); }).then(parseCSV));
-  return cache.get(file);
-}
 function human(value, unit) {
   const n = Number(value); if (!Number.isFinite(n)) return '—';
   if (unit === '%' || unit === '% TNA') return `${n.toLocaleString('es-AR',{maximumFractionDigits:1})}%`;
@@ -129,9 +121,9 @@ function sectionHTML(section,index){return `<section id="${section.id}" class="d
 document.querySelector('#app').innerHTML=`<header class="topbar"><a class="brand" href="#inicio" aria-label="DatArg — volver al inicio"><span class="brand-logo"><img src="/datarg-logo.png" alt="DatArg"></span></a><div class="graph-picker"><button type="button" aria-expanded="false" aria-controls="graph-menu">Seleccionar gráfico <span>⌄</span></button><nav id="graph-menu" aria-label="Indicadores">${sections.map(s=>`<a href="#${s.id}">${s.title}</a>`).join('')}</nav></div><div class="live"><i></i>Datos públicos</div></header>
 <main><section id="inicio" class="hero"><div class="hero-grid"></div><div class="hero-copy"><p class="kicker">UN MAPA ABIERTO DE LA ECONOMÍA ARGENTINA</p><h1>Los datos detrás<br>de <em>la economía.</em></h1><p class="lead">Una lectura integrada, trazable y actualizada de los principales indicadores del país.</p><div class="hero-actions"><a href="#precios">Explorar indicadores ↓</a><span><b>${sections.length}</b> áreas temáticas</span><span><b>50k+</b> observaciones</span></div></div></section>
 <section class="manifesto"><span>UNA SOLA PÁGINA</span><p>De la inflación al empleo, del dólar a la producción: desplazate para entender cómo se conectan las distintas dimensiones de la economía argentina.</p></section>
-${sections.map(sectionHTML).join('')}</main><footer><div class="brand"><span class="brand-logo"><img src="/datarg-logo.png" alt="DatArg"></span></div><p>Datos públicos, metodología visible y fuentes trazables.</p><a href="#inicio">Volver arriba ↑</a></footer>`;
+${sections.map(sectionHTML).join('')}</main><footer><div class="brand"><span class="brand-logo"><img src="/datarg-logo.png" alt="DatArg"></span></div><p>Datos públicos, metodología visible y fuentes trazables.</p><div class="footer-actions"><button id="install-app" type="button" hidden>Instalar DatArg ↓</button><a href="#inicio">Volver arriba ↑</a></div></footer>`;
 
-const observer=new IntersectionObserver(entries=>entries.forEach(async entry=>{if(!entry.isIntersecting)return;const section=sections.find(s=>s.id===entry.target.id);if(!section||entry.target.dataset.loaded)return;entry.target.dataset.loaded='1';try{const rows=await load(section.file);entry.target.querySelectorAll('.chart-card').forEach((card,i)=>{card.classList.remove('loading');renderChart(card,rows,section.charts[i])});}catch{entry.target.querySelector('.charts').innerHTML='<p class="empty">No se pudo cargar este conjunto de datos.</p>';}observer.unobserve(entry.target)}),{rootMargin:'400px'});
+const observer=new IntersectionObserver(entries=>entries.forEach(async entry=>{if(!entry.isIntersecting)return;const section=sections.find(s=>s.id===entry.target.id);if(!section||entry.target.dataset.loaded)return;entry.target.dataset.loaded='1';try{const rows=await loadDataset(section.file);entry.target.querySelectorAll('.chart-card').forEach((card,i)=>{card.classList.remove('loading');renderChart(card,rows,section.charts[i])});}catch{entry.target.querySelector('.charts').innerHTML='<p class="empty">No se pudo cargar este conjunto de datos.</p>';}observer.unobserve(entry.target)}),{rootMargin:'400px'});
 document.querySelectorAll('.data-section').forEach(s=>observer.observe(s));
 const picker=document.querySelector('.graph-picker'),pickerButton=picker.querySelector('button'),navLinks=[...picker.querySelectorAll('nav a')];
 const closePicker=()=>{picker.classList.remove('open');pickerButton.setAttribute('aria-expanded','false')};
@@ -140,3 +132,4 @@ navLinks.forEach(link=>link.onclick=closePicker);
 document.addEventListener('click',event=>{if(!picker.contains(event.target))closePicker()});
 document.addEventListener('keydown',event=>{if(event.key==='Escape'){closePicker();pickerButton.focus()}});
 const activeObserver=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){navLinks.forEach(a=>a.classList.toggle('active',a.hash===`#${e.target.id}`))}}),{threshold:.25});document.querySelectorAll('.data-section').forEach(s=>activeObserver.observe(s));
+setupPWA();

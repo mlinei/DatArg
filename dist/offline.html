@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#06101f" />
+    <title>DatArg — Sin conexión</title>
+    <style>
+      :root{color-scheme:dark;font-family:system-ui,sans-serif;background:#06101f;color:#eef6ff}
+      body{min-height:100vh;margin:0;display:grid;place-items:center;padding:28px;background:radial-gradient(circle at 50% 35%,#102a49,#06101f 55%)}
+      main{width:min(440px,100%);text-align:center}
+      img{width:128px;height:128px;border-radius:24px}
+      h1{font-size:34px;margin:24px 0 12px}
+      p{color:#9db5ca;line-height:1.6;margin:0 0 26px}
+      button{border:1px solid #59a7ff;background:#59a7ff;color:#06101f;padding:14px 20px;font-weight:700;cursor:pointer}
+    </style>
+  </head>
+  <body>
+    <main>
+      <img src="/icons/app-icon-192.png" alt="DatArg" />
+      <h1>Sin conexión</h1>
+      <p>DatArg no pudo conectarse. Los indicadores que ya visitaste seguirán disponibles desde la copia guardada en el dispositivo.</p>
+      <button type="button" onclick="location.reload()">Volver a intentar</button>
+    </main>
+  </body>
+</html>
