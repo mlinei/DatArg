@@ -1,5 +1,5 @@
 import { Browser } from '@capacitor/browser';
-import { Capacitor } from '@capacitor/core';
+import { Capacitor, SystemBars, SystemBarsStyle } from '@capacitor/core';
 import { Network } from '@capacitor/network';
 import { StatusBar, Style } from '@capacitor/status-bar';
 
@@ -35,9 +35,13 @@ export function setupPWA() {
 
   if (nativeRuntime) {
     document.documentElement.classList.add('native-app');
-    void StatusBar.setStyle({ style: Style.Light }).catch(() => {});
-    void StatusBar.setBackgroundColor({ color: '#06101f' }).catch(() => {});
-    void StatusBar.setOverlaysWebView({ overlay: false }).catch(() => {});
+    if (Capacitor.getPlatform() === 'android') {
+      void SystemBars.setStyle({ style: SystemBarsStyle.Dark }).catch(() => {});
+    } else {
+      void StatusBar.setStyle({ style: Style.Light }).catch(() => {});
+      void StatusBar.setBackgroundColor({ color: '#06101f' }).catch(() => {});
+      void StatusBar.setOverlaysWebView({ overlay: false }).catch(() => {});
+    }
     void Network.getStatus().then(status => updateConnection(status.connected));
     void Network.addListener('networkStatusChange', status => updateConnection(status.connected));
     document.addEventListener('click', event => {

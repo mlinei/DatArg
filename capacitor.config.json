@@ -7,6 +7,11 @@
     "androidScheme": "https"
   },
   "plugins": {
+    "SystemBars": {
+      "insetsHandling": "css",
+      "style": "DARK",
+      "hidden": false
+    },
     "SplashScreen": {
       "launchAutoHide": true,
       "launchShowDuration": 1600,
