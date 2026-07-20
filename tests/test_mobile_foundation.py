@@ -38,3 +38,14 @@ def test_mobile_runtime_has_offline_and_remote_data_paths():
     assert "html.matchAll" in service_worker
     assert "url.pathname.startsWith('/data/')" in service_worker
     assert "https://dat-arg.vercel.app/data" in data_client
+
+
+def test_capacitor_uses_the_shared_production_bundle():
+    config = json.loads((ROOT / "capacitor.config.json").read_text())
+    package = json.loads((ROOT / "package.json").read_text())
+
+    assert config["appName"] == "DatArg"
+    assert config["appId"] == "com.mlinei.datarg"
+    assert config["webDir"] == "dist"
+    assert package["dependencies"]["@capacitor/core"].startswith("^8.")
+    assert package["scripts"]["native:sync"] == "npm run build && cap sync"

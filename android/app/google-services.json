@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "653993828111",
+    "project_id": "datarg",
+    "storage_bucket": "datarg.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:653993828111:android:dc08f7022a4bee3f6ca87a",
+        "android_client_info": {
+          "package_name": "com.mlinei.datarg"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAYfiEAN5dNwzlXKWPE6VlCmz8NLaaHtBI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
