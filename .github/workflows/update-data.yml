@@ -18,6 +18,7 @@ on:
 
 permissions:
   contents: write
+  id-token: write
 
 concurrency:
   group: update-economic-data
@@ -108,13 +109,14 @@ jobs:
           git commit -m "data: actualización automática"
           git push
 
+      - name: Autenticar el envío de alertas
+        if: steps.changes.outputs.changed == 'true'
+        uses: google-github-actions/auth@v3
+        with:
+          project_id: datarg
+          workload_identity_provider: projects/653993828111/locations/global/workloadIdentityPools/github-actions/providers/github
+          service_account: datarg-notifications@datarg.iam.gserviceaccount.com
+
       - name: Avisar a las aplicaciones móviles
         if: steps.changes.outputs.changed == 'true'
-        env:
-          FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
-        run: |
-          if [ -z "$FIREBASE_SERVICE_ACCOUNT_JSON" ]; then
-            echo "::notice::Falta configurar FIREBASE_SERVICE_ACCOUNT_JSON; los datos se publicaron sin alerta móvil."
-            exit 0
-          fi
-          node web/scripts/send-data-notification.mjs "$RUNNER_TEMP/datarg-notification.json"
+        run: node web/scripts/send-data-notification.mjs "$RUNNER_TEMP/datarg-notification.json"

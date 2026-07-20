@@ -22,13 +22,17 @@ La recepción real en iOS debe probarse en un iPhone físico; el simulador no su
 
 ## Credencial de GitHub Actions
 
-En Firebase/GCP se debe crear una cuenta de servicio con permiso para enviar mensajes de Firebase Cloud Messaging. Guardar su JSON completo como secreto del repositorio GitHub con este nombre exacto:
+El workflow usa Workload Identity Federation para obtener credenciales temporales de Google Cloud. No se descargan claves privadas ni se guardan secretos JSON en GitHub.
 
-```text
-FIREBASE_SERVICE_ACCOUNT_JSON
-```
+La configuración de Google Cloud es:
 
-Nunca se debe guardar ese JSON privado en el repositorio. Si el secreto todavía no existe, la automatización publica los datos normalmente y deja una nota en el workflow, pero omite el aviso móvil.
+- Cuenta de servicio: `datarg-notifications@datarg.iam.gserviceaccount.com`.
+- Rol de la cuenta: **Firebase Cloud Messaging API Admin**.
+- Pool: `github-actions`.
+- Proveedor OIDC: `github`.
+- Repositorio autorizado: `mlinei/DatArg`, limitado a la rama `main`.
+
+GitHub solicita un token OIDC de corta duración en cada ejecución y luego suplanta únicamente esa cuenta de servicio. No se debe crear ni descargar una clave JSON para este flujo.
 
 ## Prueba controlada
 
