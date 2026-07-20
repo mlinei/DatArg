@@ -82,8 +82,11 @@ export const sections = [
     charts: [{ title: 'Personas bajo la línea', subtitle: 'Seleccioná total nacional o una región', unit: '%', regionSelector: regions, metrics: { poverty: 'Pobreza', indigence: 'Indigencia' }, region: 'total_31_agglomerates' }]
   },
   {
-    id: 'comercio', eyebrow: 'SECTOR EXTERNO', title: 'Comercio exterior', intro: 'Exportaciones, importaciones y saldo comercial mensual de bienes.', file: 'trade.csv',
-    charts: [{ title: 'Intercambio comercial argentino', subtitle: 'Millones de dólares por mes', unit: 'USD M', series: { indec_trade_exports: 'Exportaciones', indec_trade_imports: 'Importaciones', indec_trade_balance: 'Saldo' }}]
+    id: 'comercio', eyebrow: 'SECTOR EXTERNO', title: 'Comercio exterior', intro: 'Exportaciones, importaciones y saldo comercial de bienes.', file: 'trade.csv',
+    charts: [
+      { title: 'Intercambio comercial argentino', subtitle: 'Millones de dólares por mes', unit: 'USD M', series: { indec_trade_exports: 'Exportaciones', indec_trade_imports: 'Importaciones', indec_trade_balance: 'Saldo' }},
+      { title: 'Saldo comercial', subtitle: 'Elegí el resultado mensual, el cierre anual o la diferencia contra igual mes del año anterior', unit: 'USD M', includeZero: true, metricToggle: { default: 'monthly', labels: { monthly: 'Saldo mensual', annual: 'Saldo anual', yoy_change: 'Variación interanual' }, seriesByMetric: { monthly: { indec_trade_balance: 'Saldo' }, annual: { indec_trade_balance_annual: 'Saldo anual' }, yoy_change: { indec_trade_balance_yoy_change: 'Diferencia interanual' } } }, series: { indec_trade_balance: 'Saldo' } }
+    ]
   },
   {
     id: 'reservas', eyebrow: 'SECTOR EXTERNO', title: 'Reservas internacionales', intro: 'Stock diario de reservas internacionales brutas del Banco Central. Las cifras son provisorias y pueden cambiar por valuación.', file: 'reserves.csv',
