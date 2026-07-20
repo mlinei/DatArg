@@ -85,6 +85,8 @@ footer .brand-logo img{width:158px;height:158px;left:-28px;top:-40px}
 footer a{color:var(--green);text-decoration:none;font:400 11px DM Mono}
 .footer-actions{display:flex;align-items:center;gap:22px}
 .footer-actions button{border:1px solid var(--green);background:transparent;color:var(--green);padding:10px 13px;font:400 10px DM Mono;text-transform:uppercase;cursor:pointer}
+.footer-actions button.active{background:rgba(89,167,255,.12)}
+.footer-actions button:disabled{cursor:wait;opacity:.5}
 .connection-status{position:fixed;left:50%;bottom:22px;z-index:50;max-width:calc(100vw - 32px);transform:translate(-50%,18px);padding:11px 15px;background:#102a49;border:1px solid #59a7ff;color:#eef6ff;box-shadow:0 16px 45px rgba(0,0,0,.45);font:400 10px DM Mono;text-align:center;opacity:0;visibility:hidden;transition:.2s}
 .connection-status.show{opacity:1;visibility:visible;transform:translate(-50%,0)}
 .native-app body{min-height:100vh;min-height:100dvh}

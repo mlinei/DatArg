@@ -82,19 +82,39 @@ jobs:
           aed public-investment
 
       - name: Validar pipelines
-        run: pytest -q
+        run: |
+          pytest -q
+          npm run test:notifications
 
       - name: Reconstruir DatArg
         run: npm run build
 
-      - name: Guardar únicamente cambios reales
+      - name: Preparar aviso de cambios reales
+        id: changes
         run: |
-          if ! node web/scripts/has-data-changes.mjs; then
+          if node web/scripts/create-data-notification.mjs "$RUNNER_TEMP/datarg-notification.json"; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
             echo "Las fuentes todavía no publicaron observaciones nuevas."
-            exit 0
+            echo "changed=false" >> "$GITHUB_OUTPUT"
           fi
+
+      - name: Guardar únicamente cambios reales
+        if: steps.changes.outputs.changed == 'true'
+        run: |
           git add data/processed web/public/data
           git config user.name "datarg-bot"
           git config user.email "datarg-bot@users.noreply.github.com"
           git commit -m "data: actualización automática"
           git push
+
+      - name: Avisar a las aplicaciones móviles
+        if: steps.changes.outputs.changed == 'true'
+        env:
+          FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
+        run: |
+          if [ -z "$FIREBASE_SERVICE_ACCOUNT_JSON" ]; then
+            echo "::notice::Falta configurar FIREBASE_SERVICE_ACCOUNT_JSON; los datos se publicaron sin alerta móvil."
+            exit 0
+          fi
+          node web/scripts/send-data-notification.mjs "$RUNNER_TEMP/datarg-notification.json"

@@ -65,7 +65,7 @@ export function setupPWA() {
     window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(() => {}));
   }
 
-  if (!installButton || standalone()) return;
+  if (!installButton || standalone()) return { announce };
   window.addEventListener('beforeinstallprompt', event => {
     event.preventDefault();
     installPrompt = event;
@@ -89,4 +89,6 @@ export function setupPWA() {
     }
     if (isIOS) announce('En iPhone: tocá Compartir y luego “Agregar a inicio”', true);
   });
+
+  return { announce };
 }

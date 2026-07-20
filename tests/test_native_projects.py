@@ -44,6 +44,7 @@ def test_ios_project_has_identity_and_store_sized_assets():
 
 def test_native_projects_receive_capacitor_plugins():
     expected = {
+        "@capacitor-firebase/messaging",
         "@capacitor/browser",
         "@capacitor/network",
         "@capacitor/splash-screen",
@@ -54,6 +55,19 @@ def test_native_projects_receive_capacitor_plugins():
 
     package_swift = (ROOT / "ios" / "App" / "CapApp-SPM" / "Package.swift").read_text()
     android_settings = (ROOT / "android" / "capacitor.settings.gradle").read_text()
-    for plugin in ("browser", "network", "splash-screen", "status-bar"):
+    for plugin in ("firebasemessaging", "browser", "network", "splash-screen", "status-bar"):
         assert plugin.replace("-", "") in package_swift.lower().replace("-", "")
         assert plugin.replace("-", "") in android_settings.lower().replace("-", "")
+
+
+def test_native_push_capabilities_and_branding_are_declared():
+    manifest = (ROOT / "android" / "app" / "src" / "main" / "AndroidManifest.xml").read_text()
+    app_delegate = (ROOT / "ios" / "App" / "App" / "AppDelegate.swift").read_text()
+    entitlements = (ROOT / "ios" / "App" / "App" / "App.entitlements").read_text()
+    project = (ROOT / "ios" / "App" / "App.xcodeproj" / "project.pbxproj").read_text()
+
+    assert "datarg_updates" in manifest
+    assert "@drawable/ic_stat_datarg" in manifest
+    assert "capacitorDidRegisterForRemoteNotifications" in app_delegate
+    assert "aps-environment" in entitlements
+    assert "com.apple.Push" in project
