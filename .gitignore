@@ -6,3 +6,6 @@ data/raw/
 data/staging/
 data/logs/
 gha-creds-*.json
+android/keystore.properties
+*.jks
+*.keystore

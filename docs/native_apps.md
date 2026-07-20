@@ -5,7 +5,7 @@ DatArg usa Capacitor 8 para envolver el mismo bundle Vite en iOS y Android. La w
 ## Identidad y datos
 
 - Nombre: `DatArg`
-- Identificador provisional: `com.mlinei.datarg`
+- Identificador de publicación: `com.mlinei.datarg`
 - Bundle web: `dist/`
 - Datos remotos nativos: `https://dat-arg.vercel.app/data`
 - Última copia válida de cada CSV: IndexedDB del dispositivo
