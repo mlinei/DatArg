@@ -16,6 +16,7 @@ def test_android_project_has_identity_network_and_brand_assets():
     build = (ROOT / "android" / "app" / "build.gradle").read_text()
     manifest = (ROOT / "android" / "app" / "src" / "main" / "AndroidManifest.xml").read_text()
     styles = (ROOT / "android" / "app" / "src" / "main" / "res" / "values" / "styles.xml").read_text()
+    styles_v27 = (ROOT / "android" / "app" / "src" / "main" / "res" / "values-v27" / "styles.xml").read_text()
     variables = (ROOT / "android" / "variables.gradle").read_text()
     config = json.loads((ROOT / "capacitor.config.json").read_text())
     foreground = ROOT / "android" / "app" / "src" / "main" / "res" / "mipmap-xxxhdpi" / "ic_launcher_foreground.png"
@@ -25,7 +26,7 @@ def test_android_project_has_identity_network_and_brand_assets():
     assert "minSdkVersion = 24" in variables
     assert '<item name="android:windowBackground">#06101F</item>' in styles
     assert '<item name="android:windowLightStatusBar">false</item>' in styles
-    assert '<item name="android:windowLightNavigationBar">false</item>' in styles
+    assert '<item name="android:windowLightNavigationBar">false</item>' in styles_v27
     assert config["plugins"]["SystemBars"]["style"] == "DARK"
     assert foreground.exists()
     assert png_dimensions(foreground) == (192, 192)

@@ -89,11 +89,14 @@ footer a{color:var(--green);text-decoration:none;font:400 11px DM Mono}
 .footer-actions button:disabled{cursor:wait;opacity:.5}
 .connection-status{position:fixed;left:50%;bottom:22px;z-index:50;max-width:calc(100vw - 32px);transform:translate(-50%,18px);padding:11px 15px;background:#102a49;border:1px solid #59a7ff;color:#eef6ff;box-shadow:0 16px 45px rgba(0,0,0,.45);font:400 10px DM Mono;text-align:center;opacity:0;visibility:hidden;transition:.2s}
 .connection-status.show{opacity:1;visibility:visible;transform:translate(-50%,0)}
+.native-app{padding-top:var(--safe-area-inset-top,env(safe-area-inset-top,0px));padding-right:var(--safe-area-inset-right,env(safe-area-inset-right,0px));padding-bottom:var(--safe-area-inset-bottom,env(safe-area-inset-bottom,0px));padding-left:var(--safe-area-inset-left,env(safe-area-inset-left,0px))}
+.native-app::before{content:"";position:fixed;inset:0 0 auto 0;height:var(--safe-area-inset-top,env(safe-area-inset-top,0px));z-index:21;background:#06101f}
 .native-app body{min-height:100vh;min-height:100dvh}
-.native-app .topbar{height:calc(72px + env(safe-area-inset-top));padding-top:env(safe-area-inset-top)}
-.native-app .hero{min-height:calc(100dvh - 72px - env(safe-area-inset-top))}
-.native-app footer{padding-bottom:calc(60px + env(safe-area-inset-bottom))}
-.native-app .connection-status{bottom:calc(22px + env(safe-area-inset-bottom))}
+.native-app #app{padding-top:72px}
+.native-app .topbar{height:72px;position:fixed;top:var(--safe-area-inset-top,env(safe-area-inset-top,0px));left:var(--safe-area-inset-left,env(safe-area-inset-left,0px));right:var(--safe-area-inset-right,env(safe-area-inset-right,0px));padding-top:0}
+.native-app .data-section{scroll-margin-top:calc(72px + var(--safe-area-inset-top,env(safe-area-inset-top,0px)))}
+.native-app .hero{min-height:calc(100dvh - 72px - var(--safe-area-inset-top,env(safe-area-inset-top,0px)))}
+.native-app .connection-status{bottom:calc(22px + var(--safe-area-inset-bottom,env(safe-area-inset-bottom,0px)))}
 @media(max-width:900px){.brand{min-width:150px}
 .live{margin-left:auto}
 .hero{grid-template-columns:1fr;padding-top:80px}
