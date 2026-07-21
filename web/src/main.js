@@ -63,6 +63,29 @@ function filterRange(points, range, from, to) {
   const max = Math.max(...points.map(p=>p.date)); const years = range === '1Y' ? 1 : range === '5Y' ? 5 : 10;
   return points.filter(p => p.date >= max - years*365.25*864e5);
 }
+function buildTableModel(points, selectedSeries) {
+  const byPeriod = new Map();
+  points.forEach(point => {
+    if (!byPeriod.has(point.period)) byPeriod.set(point.period, new Map());
+    byPeriod.get(point.period).set(point.series_id, point);
+  });
+  const periods = [...byPeriod.keys()].sort((a,b) => +periodDate(b) - +periodDate(a));
+  return { byPeriod, periods, series: Object.entries(selectedSeries) };
+}
+function tableHTML(model, unit, limit) {
+  const shown = model.periods.slice(0, limit);
+  const remaining = model.periods.length - shown.length;
+  return `<div class="table-view"><div class="table-toolbar"><span>Mostrando ${shown.length.toLocaleString('es-AR')} de ${model.periods.length.toLocaleString('es-AR')} períodos</span><button class="table-download" type="button">Descargar CSV ↓</button></div><div class="data-table-scroll"><table><thead><tr><th>Período</th>${model.series.map(([id,label],i)=>`<th><i style="background:${COLORS[i]}"></i>${label}</th>`).join('')}</tr></thead><tbody>${shown.map(period=>`<tr><th scope="row">${period}</th>${model.series.map(([id])=>{const point=model.byPeriod.get(period).get(id);return `<td>${point?human(point.value,unit):'—'}</td>`}).join('')}</tr>`).join('')}</tbody></table></div>${remaining>0?`<button class="table-more" type="button">Mostrar ${Math.min(100,remaining).toLocaleString('es-AR')} períodos más</button>`:''}</div>`;
+}
+function downloadTableCSV(model, title) {
+  const escape = value => `"${String(value ?? '').replaceAll('"','""')}"`;
+  const records = [['Período', ...model.series.map(([,label])=>label)], ...model.periods.map(period=>[period, ...model.series.map(([id])=>model.byPeriod.get(period).get(id)?.rawValue ?? '')])];
+  const csv = `\uFEFF${records.map(record=>record.map(escape).join(',')).join('\r\n')}`;
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+  link.download = `${title.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'')}.csv`;
+  document.body.append(link); link.click(); link.remove(); setTimeout(()=>URL.revokeObjectURL(link.href),1000);
+}
 function renderChart(container, rows, chart) {
   const availableSeries = chartSeries(chart); const range = container.dataset.range || chart.defaultRange || 'ALL';
   if (!visibility.has(chart)) visibility.set(chart, new Set(Object.keys(availableSeries)));
@@ -73,9 +96,12 @@ function renderChart(container, rows, chart) {
   const compositeState = chart.composite ? (state.get(chart) || { sector: chart.composite.defaultSector, metric: chart.composite.defaultMetric }) : null;
   const toggleMetric = chart.metricToggle ? (state.get(chart) || chart.metricToggle.default) : null;
   const displayUnit = chart.metricToggle?.units?.[toggleMetric] || chart.composite?.units?.[compositeState?.metric] || ((chart.composite && compositeState.metric === 'yoy') || toggleMetric === 'mom' ? '%' : chart.unit);
-  const allSelectedPoints = rows.filter(r => selectedSeries[r.series_id]).map(r => ({...r, date:+periodDate(r.period), value:+r.value})).filter(r=>Number.isFinite(r.value)).sort((a,b)=>a.date-b.date);
+  const allSelectedPoints = rows.filter(r => selectedSeries[r.series_id]).map(r => ({...r, rawValue:r.value, date:+periodDate(r.period), value:+r.value})).filter(r=>Number.isFinite(r.value)).sort((a,b)=>a.date-b.date);
   const coverageDates = [...new Set(allSelectedPoints.map(p=>p.date))];
   const points = filterRange(allSelectedPoints, range, container.dataset.from, container.dataset.to);
+  const viewMode = container.dataset.view || 'chart';
+  const tableLimit = Math.max(100, +(container.dataset.tableLimit || 100));
+  const tableModel = buildTableModel(points, selectedSeries);
   const latest = Object.keys(selectedSeries).map((id,i) => { const list=points.filter(p=>p.series_id===id).sort((a,b)=>a.date-b.date); return {id,label:selectedSeries[id],color:COLORS[i],row:list.at(-1)}; }).filter(x=>x.row);
   const xs=points.map(p=>p.date), ys=points.map(p=>p.value); let minX=Math.min(...xs), maxX=Math.max(...xs), minY=Math.min(...ys), maxY=Math.max(...ys);
   if (!points.length) { container.innerHTML='<p class="empty">Sin datos disponibles.</p>'; return; }
@@ -84,6 +110,7 @@ function renderChart(container, rows, chart) {
   const ticks=Array.from({length:5},(_,i)=>minY+(maxY-minY)*i/4);
   const paths=latest.map(s=>{const list=points.filter(p=>p.series_id===s.id).sort((a,b)=>a.date-b.date);return `<path class="series-line" stroke="${s.color}" d="${list.map((p,i)=>`${i?'L':'M'}${x(p.date).toFixed(1)},${y(p.value).toFixed(1)}`).join(' ')}"/>`;}).join('');
   const titleControls = chart.composite ? `<div class="chart-selectors"><label>Vista<select class="metric-select">${Object.entries(chart.composite.metrics).map(([k,v])=>`<option value="${k}" ${compositeState.metric===k?'selected':''}>${v}</option>`).join('')}</select></label><label>${chart.composite.dimensionLabel || 'Rama'}<select class="sector-select">${Object.entries(chart.composite.sectors).map(([k,v])=>`<option value="${k}" ${compositeState.sector===k?'selected':''}>${v}</option>`).join('')}</select></label></div>` : chart.metricToggle ? `<div class="chart-selectors"><label>Vista<select class="toggle-metric-select">${Object.entries(chart.metricToggle.labels).map(([k,v])=>`<option value="${k}" ${toggleMetric===k?'selected':''}>${v}</option>`).join('')}</select></label></div>` : chart.selector ? `<select class="chart-select">${Object.entries(chart.selector).map(([k,v])=>`<option value="${k}" ${(state.get(chart)||chart.selected)===k?'selected':''}>${v}</option>`).join('')}</select>` : chart.regionSelector ? `<select class="chart-select">${Object.entries(chart.regionSelector).map(([k,v])=>`<option value="${k}" ${(state.get(chart)||chart.region)===k?'selected':''}>${v}</option>`).join('')}</select>`:'';
+  const viewControls = `<div class="view-toggle" role="group" aria-label="Formato de visualización"><button type="button" data-view="chart" class="${viewMode==='chart'?'active':''}" aria-pressed="${viewMode==='chart'}">Gráfico</button><button type="button" data-view="table" class="${viewMode==='table'?'active':''}" aria-pressed="${viewMode==='table'}">Tabla</button></div>`;
   const sources = [...new Map(allSelectedPoints.map(row => [sourceName(row), row])).values()].filter(row=>row.source_url);
   const annualCoverage = allSelectedPoints.length > 0 && allSelectedPoints.every(point => point.frequency === 'annual');
   const firstCoverage = coverageDates[0], lastCoverage = coverageDates.at(-1);
@@ -92,16 +119,20 @@ function renderChart(container, rows, chart) {
   const fromIndex = Math.max(0, coverageDates.findIndex(d=>d>=activeFrom));
   const toCandidate = coverageDates.findLastIndex(d=>d<=activeTo); const toIndex = toCandidate<0?coverageDates.length-1:toCandidate;
   const periodLabel = d => { const value=new Date(d); return annualCoverage || value.getUTCFullYear()!==new Date(lastCoverage).getUTCFullYear() ? `${value.getUTCFullYear()}` : `${value.getUTCMonth()+1}/${value.getUTCFullYear()}`; };
-  container.innerHTML=`<div class="chart-head"><div><h3>${chart.title}</h3><p>${chart.subtitle}</p></div>${titleControls}</div>
-    <div class="latest-row">${latest.map(s=>`<div><i style="background:${s.color}"></i><span>${s.label}</span><strong>${human(s.row.value,displayUnit)}</strong><small>${s.row.period}</small></div>`).join('')}</div>
-    <div class="chart-wrap"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${chart.title}">
+  const visualContent = viewMode === 'table' ? tableHTML(tableModel, displayUnit, tableLimit) : `<div class="chart-wrap"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${chart.title}">
       ${ticks.map(v=>`<line x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}"/><text x="${L-10}" y="${y(v)+4}" text-anchor="end">${human(v,displayUnit).replace('USD ','')}</text>`).join('')}
       ${paths}<rect class="hover-zone" x="${L}" y="${T}" width="${W-L-R}" height="${H-T-B}"/><line class="crosshair" y1="${T}" y2="${H-B}"/><circle class="hover-dot" r="4"/>
       <text x="${L}" y="${H-15}">${new Date(minX).getUTCFullYear()}</text><text x="${W-R}" y="${H-15}" text-anchor="end">${new Date(maxX).getUTCFullYear()}</text>
-    </svg><div class="tooltip"></div></div>
+    </svg><div class="tooltip"></div></div>`;
+  container.innerHTML=`<div class="chart-head"><div><h3>${chart.title}</h3><p>${chart.subtitle}</p></div><div class="chart-actions">${titleControls}${viewControls}</div></div>
+    <div class="latest-row">${latest.map(s=>`<div><i style="background:${s.color}"></i><span>${s.label}</span><strong>${human(s.row.value,displayUnit)}</strong><small>${s.row.period}</small></div>`).join('')}</div>
+    ${visualContent}
     <div class="chart-foot"><div class="legend series-toggle">${Object.entries(availableSeries).map(([id,label],i)=>`<button class="${visible.has(id)?'visible':'muted'}" data-series="${id}"><i style="background:${COLORS[i]}"></i><span>${label}</span><b>${visible.has(id)?'✓':'+'}</b></button>`).join('')}</div><div class="ranges">${['1Y','5Y','10Y','ALL'].map(r=>`<button class="${!container.dataset.from&&!container.dataset.to&&range===r?'active':''}" data-range="${r}">${r==='ALL'?'Todo':r}</button>`).join('')}</div></div>
     <div class="range-segment"><div class="range-copy"><span>PERÍODO VISIBLE</span><strong class="range-from-label">${periodLabel(coverageDates[fromIndex])}</strong><i>—</i><strong class="range-to-label">${periodLabel(coverageDates[toIndex])}</strong></div><div class="dual-range"><div class="range-track"></div><div class="range-fill"></div><input class="range-from" type="range" min="0" max="${coverageDates.length-1}" value="${fromIndex}"><input class="range-to" type="range" min="0" max="${coverageDates.length-1}" value="${toIndex}"></div><div class="coverage-labels"><span>${periodLabel(firstCoverage)}</span><span>${periodLabel(lastCoverage)}</span></div></div>
     <div class="source-citation"><span>Fuente${sources.length>1?'s':''}:</span>${sources.map(row=>`<a href="${row.source_url}" target="_blank" rel="noreferrer">${sourceName(row)} ↗</a>`).join('')}</div>`;
+  container.querySelectorAll('[data-view]').forEach(button=>button.onclick=()=>{container.dataset.view=button.dataset.view;delete container.dataset.tableLimit;renderChart(container,rows,chart)});
+  const moreButton=container.querySelector('.table-more'); if(moreButton) moreButton.onclick=()=>{container.dataset.tableLimit=tableLimit+100;renderChart(container,rows,chart)};
+  const downloadButton=container.querySelector('.table-download'); if(downloadButton) downloadButton.onclick=()=>downloadTableCSV(tableModel,chart.title);
   container.querySelectorAll('[data-range]').forEach(b=>b.onclick=()=>{container.dataset.range=b.dataset.range;delete container.dataset.from;delete container.dataset.to;renderChart(container,rows,chart)});
   container.querySelectorAll('[data-series]').forEach(b=>b.onclick=()=>{const id=b.dataset.series;if(visible.has(id)){if(visible.size>1)visible.delete(id)}else visible.add(id);renderChart(container,rows,chart)});
   const fromSlider=container.querySelector('.range-from'),toSlider=container.querySelector('.range-to'),fill=container.querySelector('.range-fill');
@@ -114,8 +145,8 @@ function renderChart(container, rows, chart) {
   if(metricSelect&&sectorSelect){const updateComposite=()=>{state.set(chart,{metric:metricSelect.value,sector:sectorSelect.value});visibility.delete(chart);delete container.dataset.from;delete container.dataset.to;renderChart(container,rows,chart)};metricSelect.onchange=sectorSelect.onchange=updateComposite;}
   const toggleMetricSelect=container.querySelector('.toggle-metric-select'); if(toggleMetricSelect) toggleMetricSelect.onchange=()=>{state.set(chart,toggleMetricSelect.value);visibility.delete(chart);delete container.dataset.from;delete container.dataset.to;renderChart(container,rows,chart)};
   const svg=container.querySelector('svg'), tip=container.querySelector('.tooltip'), cross=container.querySelector('.crosshair'), dot=container.querySelector('.hover-dot');
-  svg.onpointermove=e=>{const rect=svg.getBoundingClientRect(), px=(e.clientX-rect.left)/rect.width*W, target=minX+Math.max(0,Math.min(1,(px-L)/(W-L-R)))*(maxX-minX); const nearest=points.reduce((a,b)=>Math.abs(b.date-target)<Math.abs(a.date-target)?b:a); cross.setAttribute('x1',x(nearest.date));cross.setAttribute('x2',x(nearest.date));dot.setAttribute('cx',x(nearest.date));dot.setAttribute('cy',y(nearest.value));cross.style.opacity=dot.style.opacity=1; tip.innerHTML=`<b>${nearest.period}</b><span>${selectedSeries[nearest.series_id]}</span><strong>${human(nearest.value,displayUnit)}</strong>`;tip.style.opacity=1;tip.style.left=`${Math.min(78,Math.max(8,(x(nearest.date)/W)*100))}%`;};
-  svg.onpointerleave=()=>{tip.style.opacity=cross.style.opacity=dot.style.opacity=0};
+  if(svg){svg.onpointermove=e=>{const rect=svg.getBoundingClientRect(), px=(e.clientX-rect.left)/rect.width*W, target=minX+Math.max(0,Math.min(1,(px-L)/(W-L-R)))*(maxX-minX); const nearest=points.reduce((a,b)=>Math.abs(b.date-target)<Math.abs(a.date-target)?b:a); cross.setAttribute('x1',x(nearest.date));cross.setAttribute('x2',x(nearest.date));dot.setAttribute('cx',x(nearest.date));dot.setAttribute('cy',y(nearest.value));cross.style.opacity=dot.style.opacity=1; tip.innerHTML=`<b>${nearest.period}</b><span>${selectedSeries[nearest.series_id]}</span><strong>${human(nearest.value,displayUnit)}</strong>`;tip.style.opacity=1;tip.style.left=`${Math.min(78,Math.max(8,(x(nearest.date)/W)*100))}%`;};
+  svg.onpointerleave=()=>{tip.style.opacity=cross.style.opacity=dot.style.opacity=0};}
 }
 
 function sectionHTML(section,index){return `<section id="${section.id}" class="data-section"><div class="section-number">${String(index+1).padStart(2,'0')}</div><header class="section-title"><span>${section.eyebrow}</span><h2>${section.title}</h2><p>${section.intro}</p>${section.warning?`<aside>${section.warning}</aside>`:''}</header><div class="charts">${section.charts.map(()=>'<article class="chart-card loading">Cargando datos…</article>').join('')}</div></section>`}
