@@ -33,13 +33,44 @@ def _period(label: str) -> str:
         raise PipelineError(f"comercio exterior: período desconocido {label!r}") from exc
 
 
-def _record(series_id: str, period: str, value: Decimal, artifact: Artifact) -> dict[str, str]:
+def _record(
+    series_id: str,
+    period: str,
+    value: Decimal,
+    artifact: Artifact,
+    frequency: str = "monthly",
+    status: str = "official",
+) -> dict[str, str]:
     return {
-        "series_id": series_id, "period": period, "frequency": "monthly",
+        "series_id": series_id, "period": period, "frequency": frequency,
         "value": format(value.quantize(Decimal("0.000001")), "f"), "unit": "million_usd",
-        "status": "official", "source_id": artifact.source_id, "source_url": artifact.url,
+        "status": status, "source_id": artifact.source_id, "source_url": artifact.url,
         "source_sha256": artifact.sha256, "retrieved_at": artifact.retrieved_at,
     }
+
+
+def _derived_balance_records(
+    balance: dict[str, Decimal], artifact: Artifact
+) -> list[dict[str, str]]:
+    records: list[dict[str, str]] = []
+    by_year: dict[str, list[tuple[str, Decimal]]] = {}
+    for period, value in balance.items():
+        by_year.setdefault(period[:4], []).append((period, value))
+        previous = f"{int(period[:4]) - 1:04d}-{period[5:7]}"
+        if previous in balance:
+            records.append(_record(
+                "indec_trade_balance_yoy_change", period, value - balance[previous], artifact,
+                status="calculated",
+            ))
+    for year, observations in by_year.items():
+        months = {period[5:7] for period, _ in observations}
+        if months == {f"{month:02d}" for month in range(1, 13)}:
+            records.append(_record(
+                "indec_trade_balance_annual", year,
+                sum((value for _, value in observations), Decimal("0")), artifact,
+                frequency="annual", status="calculated",
+            ))
+    return records
 
 
 def extract(artifact: Artifact) -> list[dict[str, str]]:
@@ -80,6 +111,7 @@ def extract(artifact: Artifact) -> list[dict[str, str]]:
         calculated = values["Exportaciones"][period] - values["Importaciones"][period]
         if abs(calculated - values["Saldo"][period]) > Decimal("0.000001"):
             raise PipelineError(f"comercio exterior: saldo inconsistente en {period}")
+    records.extend(_derived_balance_records(values["Saldo"], artifact))
     return records
 
 
@@ -123,4 +155,3 @@ def run(root: Path, source_file: Path | None = None) -> dict[str, object]:
     run_id = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     artifact = acquire("indec_trade_balance", TRADE_URL, root / "data" / "raw", source_file)
     return promote(extract(artifact), root, run_id)
-
