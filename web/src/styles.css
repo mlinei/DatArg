@@ -1,7 +1,7 @@
 @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Manrope:wght@400;500;600;700&family=Newsreader:ital,opsz,wght@1,6..72,500&display=swap');
 :root{--bg:#06101f;--panel:#09182b;--panel2:#0d2038;--line:#193653;--text:#eef6ff;--muted:#88a3ba;--green:#59a7ff;--yellow:#f6c85f}
 *{box-sizing:border-box}
-html{scroll-behavior:smooth}
+html{scroll-behavior:smooth;max-width:100%;overflow-x:hidden}
 body{margin:0;background:var(--bg);color:var(--text);font-family:Manrope,system-ui,sans-serif;overflow-x:hidden}
 body:before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.25;background-image:linear-gradient(rgba(255,255,255,.018) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.018) 1px,transparent 1px);background-size:64px 64px}
 .topbar{height:72px;position:sticky;top:0;z-index:20;display:flex;align-items:center;padding:0 4vw;background:rgba(6,16,31,.88);backdrop-filter:blur(18px);border-bottom:1px solid var(--line)}
@@ -101,7 +101,8 @@ footer{padding:60px 7vw;display:flex;justify-content:space-between;align-items:c
 footer .brand-logo{width:102px;height:71px}
 footer .brand-logo img{width:158px;height:158px;left:-28px;top:-40px}
 footer a{color:var(--green);text-decoration:none;font:400 11px DM Mono}
-.footer-actions{display:flex;align-items:center;gap:22px}
+.footer-actions{display:flex;align-items:center;gap:22px;flex-wrap:wrap}
+.footer-actions .contact-link{overflow-wrap:anywhere}
 .footer-actions button{border:1px solid var(--green);background:transparent;color:var(--green);padding:10px 13px;font:400 10px DM Mono;text-transform:uppercase;cursor:pointer}
 .footer-actions button.active{background:rgba(89,167,255,.12)}
 .footer-actions button:disabled{cursor:wait;opacity:.5}
@@ -144,6 +145,7 @@ footer{flex-direction:column;align-items:start;gap:25px}
 .topbar .brand-logo img{width:120px;height:120px;left:-21px;top:-30px}
 .graph-picker{max-width:none}
 .graph-picker>button{padding-left:11px;padding-right:11px;font-size:9px}
+.graph-picker nav{left:auto;right:0}
 .hero-copy,.lead{max-width:88vw}
 .live{display:none}
 }
