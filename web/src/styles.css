@@ -101,7 +101,8 @@ footer{padding:60px 7vw;display:flex;justify-content:space-between;align-items:c
 footer .brand-logo{width:102px;height:71px}
 footer .brand-logo img{width:158px;height:158px;left:-28px;top:-40px}
 footer a{color:var(--green);text-decoration:none;font:400 11px DM Mono}
-.footer-actions{display:flex;align-items:center;gap:22px}
+.footer-actions{display:flex;align-items:center;gap:22px;flex-wrap:wrap}
+.footer-actions .contact-link{overflow-wrap:anywhere}
 .footer-actions button{border:1px solid var(--green);background:transparent;color:var(--green);padding:10px 13px;font:400 10px DM Mono;text-transform:uppercase;cursor:pointer}
 .footer-actions button.active{background:rgba(89,167,255,.12)}
 .footer-actions button:disabled{cursor:wait;opacity:.5}
