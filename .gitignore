@@ -2,6 +2,10 @@
 node_modules/
 __pycache__/
 *.egg-info/
+.env
+.env.*
+!.env.example
+.checkpoints/
 data/raw/
 data/staging/
 data/logs/
@@ -10,5 +14,7 @@ android/keystore.properties
 *.jks
 *.keystore
 dist/
-
 .DS_Store
+.vercel
+.env*
+!.env.example
