@@ -70,6 +70,7 @@ jobs:
           aed reserves
           aed net-reserves
           aed exchange-rates
+          aed real-exchange-rate
           aed markets
           aed country-risk
           aed interest-rates

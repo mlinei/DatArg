@@ -12,6 +12,7 @@ from .gdp import run as run_gdp
 from .labor import run as run_labor
 from .industry import run as run_industry
 from .exchange_rates import run as run_exchange_rates
+from .real_exchange_rate import run as run_real_exchange_rate
 from .country_risk import run as run_country_risk
 from .interest_rates import run as run_interest_rates
 from .consolidated_debt import run as run_consolidated_debt
@@ -55,6 +56,9 @@ def main(argv: list[str] | None = None) -> int:
     fx.add_argument("--root", type=Path, default=Path.cwd())
     for house in ("oficial", "blue", "bolsa", "contadoconliqui"):
         fx.add_argument(f"--{house}-file", type=Path)
+    real_fx = sub.add_parser("real-exchange-rate", help="ejecuta ITCRM y bilaterales reales del BCRA")
+    real_fx.add_argument("--root", type=Path, default=Path.cwd())
+    real_fx.add_argument("--source-file", type=Path, help="libro histórico local")
     risk = sub.add_parser("country-risk", help="ejecuta la evolución del riesgo país")
     risk.add_argument("--root", type=Path, default=Path.cwd())
     risk.add_argument("--source-file", type=Path)
@@ -111,6 +115,8 @@ def main(argv: list[str] | None = None) -> int:
         elif args.command == "exchange-rates":
             files = {house: getattr(args, f"{house}_file") for house in ("oficial", "blue", "bolsa", "contadoconliqui")}
             result = run_exchange_rates(args.root.resolve(), files)
+        elif args.command == "real-exchange-rate":
+            result = run_real_exchange_rate(args.root.resolve(), args.source_file)
         elif args.command == "country-risk":
             result = run_country_risk(args.root.resolve(), args.source_file)
         elif args.command == "interest-rates":
