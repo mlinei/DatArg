@@ -4,6 +4,9 @@
 
 - Nombre: DatArg
 - Subtítulo: Economía argentina en datos
+- Apple ID: 6793578391
+- SKU: ar.fausto.datarg
+- Identificador de paquete: ar.fausto.datarg
 - Categoría principal: Finanzas
 - Categoría secundaria: Noticias
 - Idioma principal: Español (Argentina)

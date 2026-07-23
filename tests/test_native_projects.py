@@ -21,7 +21,7 @@ def test_android_project_has_identity_network_and_brand_assets():
     config = json.loads((ROOT / "capacitor.config.json").read_text())
     foreground = ROOT / "android" / "app" / "src" / "main" / "res" / "mipmap-xxxhdpi" / "ic_launcher_foreground.png"
 
-    assert 'applicationId "com.mlinei.datarg"' in build
+    assert 'applicationId "ar.fausto.datarg"' in build
     assert 'android.permission.INTERNET' in manifest
     assert "minSdkVersion = 24" in variables
     assert '<item name="android:windowBackground">#06101F</item>' in styles
@@ -37,7 +37,7 @@ def test_ios_project_has_identity_and_store_sized_assets():
     app_icon = ROOT / "ios" / "App" / "App" / "Assets.xcassets" / "AppIcon.appiconset" / "AppIcon-512@2x.png"
     splash = ROOT / "ios" / "App" / "App" / "Assets.xcassets" / "Splash.imageset" / "Default@1x~universal~anyany.png"
 
-    assert "PRODUCT_BUNDLE_IDENTIFIER = com.mlinei.datarg;" in project
+    assert "PRODUCT_BUNDLE_IDENTIFIER = ar.fausto.datarg;" in project
     assert "IPHONEOS_DEPLOYMENT_TARGET = 15.0;" in project
     assert png_dimensions(app_icon) == (1024, 1024)
     assert png_dimensions(splash) == (2732, 2732)

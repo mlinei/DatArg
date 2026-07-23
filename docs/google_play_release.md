@@ -3,8 +3,8 @@
 ## Identidad de la aplicación
 
 - Nombre: **DatArg**
-- Nombre del paquete: `com.mlinei.datarg`
-- Versión inicial: `1.0` (`versionCode` 1)
+- Nombre del paquete: `ar.fausto.datarg`
+- Versión inicial: `1.0.0` (`versionCode` 1)
 - Categoría sugerida: Finanzas
 - Correo de soporte: completar con el correo de la cuenta publicadora
 - Política de privacidad: `https://dat-arg.vercel.app/privacidad.html`

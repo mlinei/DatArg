@@ -4,7 +4,7 @@ DatArg usa Firebase Cloud Messaging (FCM) para avisar cuando el pipeline incorpo
 
 ## Archivos de las aplicaciones
 
-El proyecto de Firebase debe registrar las dos aplicaciones con el mismo identificador ya usado por Capacitor: `com.mlinei.datarg`.
+El proyecto de Firebase debe registrar las dos aplicaciones con el mismo identificador ya usado por Capacitor: `ar.fausto.datarg`.
 
 - Android: descargar `google-services.json` y guardarlo en `android/app/google-services.json`.
 - iOS: descargar `GoogleService-Info.plist`, guardarlo en `ios/App/App/GoogleService-Info.plist` y añadirlo al target **App** desde Xcode.

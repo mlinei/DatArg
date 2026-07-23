@@ -45,7 +45,7 @@ def test_capacitor_uses_the_shared_production_bundle():
     package = json.loads((ROOT / "package.json").read_text())
 
     assert config["appName"] == "DatArg"
-    assert config["appId"] == "com.mlinei.datarg"
+    assert config["appId"] == "ar.fausto.datarg"
     assert config["webDir"] == "dist"
     assert package["dependencies"]["@capacitor/core"].startswith("^8.")
     assert package["scripts"]["native:sync"] == "npm run build && cap sync"

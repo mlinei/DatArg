@@ -9,3 +9,6 @@ gha-creds-*.json
 android/keystore.properties
 *.jks
 *.keystore
+dist/
+
+.DS_Store
