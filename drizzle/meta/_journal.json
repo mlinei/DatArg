@@ -1,0 +1,20 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1784840766496,
+      "tag": "20260723210606_initial_datarg_database",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1784841667890,
+      "tag": "20260723212107_dataset_import_status",
+      "breakpoints": true
+    }
+  ]
+}

@@ -87,9 +87,6 @@ jobs:
           pytest -q
           npm run test:notifications
 
-      - name: Reconstruir DatArg
-        run: npm run build
-
       - name: Preparar aviso de cambios reales
         id: changes
         run: |
@@ -99,6 +96,19 @@ jobs:
             echo "Las fuentes todavía no publicaron observaciones nuevas."
             echo "changed=false" >> "$GITHUB_OUTPUT"
           fi
+
+      - name: Actualizar la base de datos Turso
+        if: steps.changes.outputs.changed == 'true'
+        env:
+          TURSO_DATABASE_URL: ${{ secrets.TURSO_DATABASE_URL }}
+          TURSO_AUTH_TOKEN: ${{ secrets.TURSO_AUTH_TOKEN }}
+        run: |
+          npm run db:migrate
+          npm run db:import
+          npm run db:verify
+
+      - name: Reconstruir DatArg
+        run: npm run build
 
       - name: Guardar únicamente cambios reales
         if: steps.changes.outputs.changed == 'true'

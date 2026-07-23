@@ -5,7 +5,8 @@ const DB_NAME = 'datarg-data-cache';
 const STORE_NAME = 'datasets';
 const nativeRuntime = Capacitor.isNativePlatform();
 const configuredBase = import.meta.env.VITE_DATA_BASE_URL?.replace(/\/$/, '');
-const DATA_BASE = configuredBase || (nativeRuntime ? 'https://dat-arg.vercel.app/data' : '/data');
+const DATA_BASE = configuredBase || (nativeRuntime ? 'https://dat-arg.vercel.app/api/data' : '/api/data');
+const FALLBACK_DATA_BASE = nativeRuntime ? 'https://dat-arg.vercel.app/data' : '/data';
 
 export function parseCSV(text) {
   const lines = text.trim().split(/\r?\n/);
@@ -45,19 +46,34 @@ async function store(file, text) {
   });
 }
 
-function endpoint(file) {
+function endpoint(file, base = DATA_BASE) {
   if (!/^[a-z0-9_-]+\.csv$/.test(file)) throw new Error(`Nombre de dataset inválido: ${file}`);
-  return `${DATA_BASE}/${encodeURIComponent(file)}`;
+  return `${base}/${encodeURIComponent(file)}`;
+}
+
+async function download(file, base) {
+  const response = await fetch(endpoint(file, base), { cache: 'no-store' });
+  if (!response.ok) throw new Error(`${file}: HTTP ${response.status}`);
+  const text = await response.text();
+  if (!text.startsWith('series_id,') || text.trim().split(/\r?\n/).length < 2) {
+    throw new Error(`${file}: contenido inválido`);
+  }
+  return text;
 }
 
 async function fetchText(file) {
   try {
-    const response = await fetch(endpoint(file), { cache: 'no-store' });
-    if (!response.ok) throw new Error(`${file}: HTTP ${response.status}`);
-    const text = await response.text();
-    if (!text.startsWith('series_id,') || text.trim().split(/\r?\n/).length < 2) throw new Error(`${file}: contenido inválido`);
+    let text;
+    let source = 'database';
+    try {
+      text = await download(file, DATA_BASE);
+    } catch (databaseError) {
+      console.warn(`Turso no disponible para ${file}; se usa el respaldo CSV`, databaseError);
+      text = await download(file, FALLBACK_DATA_BASE);
+      source = 'csv-fallback';
+    }
     void store(file, text);
-    window.dispatchEvent(new CustomEvent('datarg:data-source', { detail: { file, source: 'network' } }));
+    window.dispatchEvent(new CustomEvent('datarg:data-source', { detail: { file, source } }));
     return text;
   } catch (error) {
     const stored = await readStored(file);
@@ -82,4 +98,4 @@ export function clearDatasetMemory() {
   memory.clear();
 }
 
-export const dataClientInfo = Object.freeze({ baseUrl: DATA_BASE, nativeRuntime });
+export const dataClientInfo = Object.freeze({ baseUrl: DATA_BASE, fallbackBaseUrl: FALLBACK_DATA_BASE, nativeRuntime });

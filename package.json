@@ -5,6 +5,10 @@
   "type": "module",
   "scripts": {
     "sync-data": "node web/scripts/sync-data.mjs",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:import": "node --import tsx scripts/db/import-csv.ts",
+    "db:verify": "node --import tsx scripts/db/verify.ts",
     "dev": "npm run sync-data && vite --host 0.0.0.0",
     "build": "npm run sync-data && vite build",
     "preview": "vite preview --host 0.0.0.0",
@@ -18,7 +22,9 @@
   "devDependencies": {
     "@capacitor/assets": "^3.0.5",
     "@capacitor/cli": "^8.4.2",
+    "drizzle-kit": "^0.31.10",
     "firebase-admin": "^14.2.0",
+    "tsx": "^4.23.1",
     "vite": "^7.0.0"
   },
   "dependencies": {
@@ -30,6 +36,9 @@
     "@capacitor/network": "^8.0.1",
     "@capacitor/splash-screen": "^8.0.2",
     "@capacitor/status-bar": "^8.0.3",
+    "@libsql/client": "^0.17.4",
+    "dotenv": "^17.4.2",
+    "drizzle-orm": "^0.45.2",
     "firebase": "^12.16.0"
   }
 }

@@ -1,0 +1,1 @@
+ALTER TABLE `datasets` ADD `import_status` text DEFAULT 'ready' NOT NULL;
