@@ -63,19 +63,19 @@ function filterRange(points, range, from, to) {
   const max = Math.max(...points.map(p=>p.date)); const years = range === '1Y' ? 1 : range === '5Y' ? 5 : 10;
   return points.filter(p => p.date >= max - years*365.25*864e5);
 }
-function buildTableModel(points, selectedSeries) {
+function buildTableModel(points, selectedSeries, colorFor) {
   const byPeriod = new Map();
   points.forEach(point => {
     if (!byPeriod.has(point.period)) byPeriod.set(point.period, new Map());
     byPeriod.get(point.period).set(point.series_id, point);
   });
   const periods = [...byPeriod.keys()].sort((a,b) => +periodDate(b) - +periodDate(a));
-  return { byPeriod, periods, series: Object.entries(selectedSeries) };
+  return { byPeriod, periods, series: Object.entries(selectedSeries).map(([id,label])=>[id,label,colorFor(id)]) };
 }
 function tableHTML(model, unit, limit) {
   const shown = model.periods.slice(0, limit);
   const remaining = model.periods.length - shown.length;
-  return `<div class="table-view"><div class="table-toolbar"><span>Mostrando ${shown.length.toLocaleString('es-AR')} de ${model.periods.length.toLocaleString('es-AR')} períodos</span><button class="table-download" type="button">Descargar CSV ↓</button></div><div class="data-table-scroll"><table><thead><tr><th>Período</th>${model.series.map(([id,label],i)=>`<th><i style="background:${COLORS[i]}"></i>${label}</th>`).join('')}</tr></thead><tbody>${shown.map(period=>`<tr><th scope="row">${period}</th>${model.series.map(([id])=>{const point=model.byPeriod.get(period).get(id);return `<td>${point?human(point.value,unit):'—'}</td>`}).join('')}</tr>`).join('')}</tbody></table></div>${remaining>0?`<button class="table-more" type="button">Mostrar ${Math.min(100,remaining).toLocaleString('es-AR')} períodos más</button>`:''}</div>`;
+  return `<div class="table-view"><div class="table-toolbar"><span>Mostrando ${shown.length.toLocaleString('es-AR')} de ${model.periods.length.toLocaleString('es-AR')} períodos</span><button class="table-download" type="button">Descargar CSV ↓</button></div><div class="data-table-scroll"><table><thead><tr><th>Período</th>${model.series.map(([id,label,color])=>`<th><i style="background:${color}"></i>${label}</th>`).join('')}</tr></thead><tbody>${shown.map(period=>`<tr><th scope="row">${period}</th>${model.series.map(([id])=>{const point=model.byPeriod.get(period).get(id);return `<td>${point?human(point.value,unit):'—'}</td>`}).join('')}</tr>`).join('')}</tbody></table></div>${remaining>0?`<button class="table-more" type="button">Mostrar ${Math.min(100,remaining).toLocaleString('es-AR')} períodos más</button>`:''}</div>`;
 }
 function downloadTableCSV(model, title) {
   const escape = value => `"${String(value ?? '').replaceAll('"','""')}"`;
@@ -88,7 +88,9 @@ function downloadTableCSV(model, title) {
 }
 function renderChart(container, rows, chart) {
   const availableSeries = chartSeries(chart); const range = container.dataset.range || chart.defaultRange || 'ALL';
-  if (!visibility.has(chart)) visibility.set(chart, new Set(Object.keys(availableSeries)));
+  const seriesEntries = Object.entries(availableSeries);
+  const colorFor = id => COLORS[Math.max(0, seriesEntries.findIndex(([seriesId])=>seriesId===id)) % COLORS.length];
+  if (!visibility.has(chart)) visibility.set(chart, new Set((chart.defaultVisible || Object.keys(availableSeries)).filter(id=>availableSeries[id])));
   const visible = visibility.get(chart); const availableIds = new Set(Object.keys(availableSeries));
   for (const id of [...visible]) if (!availableIds.has(id)) visible.delete(id);
   if (![...visible].some(id=>availableIds.has(id))) Object.keys(availableSeries).forEach(id=>visible.add(id));
@@ -101,8 +103,8 @@ function renderChart(container, rows, chart) {
   const points = filterRange(allSelectedPoints, range, container.dataset.from, container.dataset.to);
   const viewMode = container.dataset.view || 'chart';
   const tableLimit = Math.max(100, +(container.dataset.tableLimit || 100));
-  const tableModel = buildTableModel(points, selectedSeries);
-  const latest = Object.keys(selectedSeries).map((id,i) => { const list=points.filter(p=>p.series_id===id).sort((a,b)=>a.date-b.date); return {id,label:selectedSeries[id],color:COLORS[i],row:list.at(-1)}; }).filter(x=>x.row);
+  const tableModel = buildTableModel(points, selectedSeries, colorFor);
+  const latest = Object.keys(selectedSeries).map(id => { const list=points.filter(p=>p.series_id===id).sort((a,b)=>a.date-b.date); return {id,label:selectedSeries[id],color:colorFor(id),row:list.at(-1)}; }).filter(x=>x.row);
   const xs=points.map(p=>p.date), ys=points.map(p=>p.value); let minX=Math.min(...xs), maxX=Math.max(...xs), minY=Math.min(...ys), maxY=Math.max(...ys);
   if (!points.length) { container.innerHTML='<p class="empty">Sin datos disponibles.</p>'; return; }
   if (minX===maxX) { minX-=1; maxX+=1; } if (chart.includeZero) { minY=Math.min(minY,0); maxY=Math.max(maxY,0); } if(minY===maxY){minY-=1;maxY+=1} const pad=(maxY-minY)*.12; minY-=pad;maxY+=pad;
