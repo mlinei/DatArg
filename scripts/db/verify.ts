@@ -3,9 +3,9 @@ import { createHash } from 'node:crypto';
 import { readFile, readdir } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { asc, eq } from 'drizzle-orm';
-import { createDatabase } from '../../db/client';
-import { datasets, observations, series } from '../../db/schema';
-import { CSV_COLUMNS, parseCsv } from './csv';
+import { createDatabase } from '../../db/client.js';
+import { datasets, observations, series } from '../../db/schema.js';
+import { CSV_COLUMNS, parseCsv } from './csv.js';
 
 const sourceDirectory = resolve(process.argv[2] || 'data/processed');
 const files = (await readdir(sourceDirectory)).filter(file => file.endsWith('.csv')).sort();

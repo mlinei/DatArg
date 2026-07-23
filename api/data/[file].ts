@@ -1,7 +1,7 @@
 import { asc, eq } from 'drizzle-orm';
-import { createDatabase } from '../../db/client';
-import { datasets, observations, series } from '../../db/schema';
-import { rowsToCsv, type CsvRow } from '../../scripts/db/csv';
+import { createDatabase } from '../../db/client.js';
+import { datasets, observations, series } from '../../db/schema.js';
+import { rowsToCsv, type CsvRow } from '../../scripts/db/csv.js';
 
 const FILE_PATTERN = /^[a-z0-9_-]+\.csv$/;
 const CORS_HEADERS = {
