@@ -6,6 +6,8 @@ import json
 import os
 import shutil
 import tempfile
+import time
+import urllib.error
 import urllib.request
 from urllib.parse import urlparse
 from dataclasses import dataclass
@@ -28,6 +30,9 @@ IPC_CODES = {
     "Regulados": "indec_ipc_regulated",
     "Estacional": "indec_ipc_seasonal",
 }
+DOWNLOAD_ATTEMPTS = 5
+DOWNLOAD_BACKOFF_SECONDS = (2, 4, 8, 16)
+TRANSIENT_HTTP_STATUS = {408, 425, 429, 500, 502, 503, 504}
 
 
 class PipelineError(RuntimeError):
@@ -52,6 +57,33 @@ def _sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
+def _is_transient_download_error(exc: Exception) -> bool:
+    if isinstance(exc, urllib.error.HTTPError):
+        return exc.code in TRANSIENT_HTTP_STATUS
+    return isinstance(exc, (urllib.error.URLError, TimeoutError, ConnectionError))
+
+
+def _download(source_id: str, url: str, target: Path) -> None:
+    request = urllib.request.Request(url, headers={"User-Agent": "argentina-economic-data/0.2"})
+    for attempt in range(1, DOWNLOAD_ATTEMPTS + 1):
+        try:
+            with urllib.request.urlopen(request, timeout=60) as response, target.open("wb") as output:
+                content_type = response.headers.get_content_type()
+                if content_type == "text/html":
+                    raise PipelineError(f"{source_id}: la fuente devolvió HTML en lugar del recurso")
+                shutil.copyfileobj(response, output)
+            return
+        except Exception as exc:
+            target.unlink(missing_ok=True)
+            if not _is_transient_download_error(exc):
+                raise
+            if attempt == DOWNLOAD_ATTEMPTS:
+                raise PipelineError(
+                    f"{source_id}: descarga falló tras {DOWNLOAD_ATTEMPTS} intentos: {exc}"
+                ) from exc
+            time.sleep(DOWNLOAD_BACKOFF_SECONDS[attempt - 1])
+
+
 def acquire(source_id: str, url: str, raw_root: Path, local: Path | None = None) -> Artifact:
     retrieved = datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
     stamp = retrieved.replace(":", "").replace("-", "")
@@ -63,12 +95,7 @@ def acquire(source_id: str, url: str, raw_root: Path, local: Path | None = None)
         if local:
             shutil.copyfile(local, target)
         else:
-            request = urllib.request.Request(url, headers={"User-Agent": "argentina-economic-data/0.2"})
-            with urllib.request.urlopen(request, timeout=60) as response, target.open("wb") as output:
-                content_type = response.headers.get_content_type()
-                if content_type == "text/html":
-                    raise PipelineError(f"{source_id}: INDEC devolvió HTML en lugar del recurso")
-                shutil.copyfileobj(response, output)
+            _download(source_id, url, target)
     except Exception:
         shutil.rmtree(target_dir, ignore_errors=True)
         raise
