@@ -3,6 +3,10 @@ import { sections, COLORS } from './config.js';
 import { loadDataset } from './data-client.js';
 import { setupPWA } from './pwa.js';
 import { setupNotifications } from './notifications.js';
+import { inject } from '@vercel/analytics';
+
+// Initialize Vercel Web Analytics
+inject();
 
 const state = new Map();
 const visibility = new Map();
