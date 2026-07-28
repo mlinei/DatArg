@@ -74,20 +74,32 @@ def promote(records: list[dict[str, str]], root: Path, run_id: str) -> dict[str,
     if len(keys) != len(set(keys)): raise PipelineError("Merval: fechas duplicadas")
     target_dir = root / "data" / "processed"; log_dir = root / "data" / "logs" / "markets"
     target_dir.mkdir(parents=True, exist_ok=True); log_dir.mkdir(parents=True, exist_ok=True)
-    target = target_dir / "markets.csv"; old: dict[str, str] = {}
+    target = target_dir / "markets.csv"; old_rows: dict[str, dict[str, str]] = {}
     if target.exists():
         with target.open(encoding="utf-8", newline="") as handle:
-            old = {row["period"]: row["value"] for row in csv.DictReader(handle)}
-    new = {row["period"]: row["value"] for row in records}
-    report = {"run_id": run_id, "rows": len(records), "series": 1, "min_period": keys[0],
-              "max_period": keys[-1], "created": len(new.keys() - old.keys()),
-              "deleted": len(old.keys() - new.keys()),
-              "modified": sum(old[key] != new[key] for key in old.keys() & new.keys())}
-    if old and report["deleted"]: raise PipelineError("Merval: la fuente eliminó observaciones")
+            old_rows = {row["period"]: row for row in csv.DictReader(handle)}
+    new_rows = {row["period"]: row for row in records}
+    old_keys, new_keys = old_rows.keys(), new_rows.keys()
+    overlap = old_keys & new_keys
+    if old_rows and len(overlap) < int(len(old_rows) * 0.9):
+        raise PipelineError("Merval: la cobertura histórica de la fuente retrocedió abruptamente")
+
+    # Yahoo puede omitir transitoriamente cierres históricos. Las observaciones
+    # ya publicadas son hechos persistidos: se retienen si no vienen en la
+    # respuesta actual, mientras que las fechas presentes se recalculan.
+    merged_rows = old_rows | new_rows
+    output_rows = [merged_rows[period] for period in sorted(merged_rows)]
+    omitted = old_keys - new_keys
+    report = {"run_id": run_id, "rows": len(output_rows), "incoming_rows": len(records),
+              "series": 1, "min_period": output_rows[0]["period"],
+              "max_period": output_rows[-1]["period"],
+              "created": len(new_keys - old_keys), "deleted": 0,
+              "retained_from_history": len(omitted),
+              "modified": sum(old_rows[key]["value"] != new_rows[key]["value"] for key in overlap)}
     fd, temporary = tempfile.mkstemp(prefix="markets-", suffix=".csv", dir=target_dir)
     try:
         with os.fdopen(fd, "w", encoding="utf-8", newline="") as handle:
-            writer = csv.DictWriter(handle, fieldnames=OUTPUT_COLUMNS); writer.writeheader(); writer.writerows(records)
+            writer = csv.DictWriter(handle, fieldnames=OUTPUT_COLUMNS); writer.writeheader(); writer.writerows(output_rows)
             handle.flush(); os.fsync(handle.fileno())
         os.replace(temporary, target)
     finally:
