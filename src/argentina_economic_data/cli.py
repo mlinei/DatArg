@@ -23,6 +23,9 @@ from .markets import run as run_markets
 from .net_reserves import run as run_net_reserves
 from .fiscal import run as run_fiscal
 from .public_investment import run as run_public_investment
+from .fx_intervention import run as run_fx_intervention
+from .credit import run as run_credit
+from .debt_maturities import run as run_debt_maturities
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -65,6 +68,14 @@ def main(argv: list[str] | None = None) -> int:
     rates = sub.add_parser("interest-rates", help="ejecuta TAMAR y BADLAR del BCRA")
     rates.add_argument("--root", type=Path, default=Path.cwd())
     for variable_id in (7, 35, 44, 45): rates.add_argument(f"--variable-{variable_id}-file", type=Path)
+    intervention = sub.add_parser("fx-intervention", help="ejecuta intervención cambiaria diaria del BCRA")
+    intervention.add_argument("--root", type=Path, default=Path.cwd())
+    intervention.add_argument("--source-file", type=Path)
+    credit = sub.add_parser("credit", help="ejecuta crédito privado y exposición al sector público")
+    credit.add_argument("--root", type=Path, default=Path.cwd())
+    credit.add_argument("--private-file", type=Path)
+    credit.add_argument("--public-file", type=Path)
+    credit.add_argument("--securities-file", type=Path)
     debt = sub.add_parser("consolidated-debt", help="ejecuta deuda neta consolidada estimada")
     debt.add_argument("--root", type=Path, default=Path.cwd())
     debt.add_argument("--source-file", type=Path, help="informe PDF local")
@@ -96,6 +107,9 @@ def main(argv: list[str] | None = None) -> int:
     public_investment = sub.add_parser("public-investment", help="ejecuta inversión pública y gastos de capital")
     public_investment.add_argument("--root", type=Path, default=Path.cwd())
     public_investment.add_argument("--source-file", type=Path, help="planilla oficial local")
+    maturities = sub.add_parser("debt-maturities", help="ejecuta el cronograma proyectado de vencimientos del Tesoro")
+    maturities.add_argument("--root", type=Path, default=Path.cwd())
+    maturities.add_argument("--source-file", type=Path, help="libro trimestral oficial local")
     args = parser.parse_args(argv)
     try:
         if args.command == "inflation":
@@ -122,6 +136,10 @@ def main(argv: list[str] | None = None) -> int:
         elif args.command == "interest-rates":
             files = {i: getattr(args, f"variable_{i}_file") for i in (7, 35, 44, 45)}
             result = run_interest_rates(args.root.resolve(), files)
+        elif args.command == "fx-intervention":
+            result = run_fx_intervention(args.root.resolve(), args.source_file)
+        elif args.command == "credit":
+            result = run_credit(args.root.resolve(), args.private_file, args.public_file, args.securities_file)
         elif args.command == "consolidated-debt":
             result = run_consolidated_debt(args.root.resolve(), args.source_file)
         elif args.command == "public-debt":
@@ -137,8 +155,10 @@ def main(argv: list[str] | None = None) -> int:
             result = run_markets(args.root.resolve(), args.source_file)
         elif args.command == "fiscal":
             result = run_fiscal(args.root.resolve(), args.tax_file, args.fiscal_file, args.refresh_history)
-        else:
+        elif args.command == "public-investment":
             result = run_public_investment(args.root.resolve(), args.source_file)
+        else:
+            result = run_debt_maturities(args.root.resolve(), args.source_file)
     except PipelineError as exc:
         parser.exit(1, f"error: {exc}\n")
     print(json.dumps(result, ensure_ascii=False, indent=2))

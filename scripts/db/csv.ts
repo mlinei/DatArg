@@ -13,6 +13,27 @@ export const CSV_COLUMNS = [
 
 export type CsvRow = Record<(typeof CSV_COLUMNS)[number], string>;
 
+export const MATURITY_CSV_COLUMNS = [
+  'series_id',
+  'snapshot_date',
+  'period',
+  'frequency',
+  'service_type',
+  'category',
+  'detail_level',
+  'source_row',
+  'instrument',
+  'value',
+  'unit',
+  'status',
+  'source_id',
+  'source_url',
+  'source_sha256',
+  'retrieved_at',
+] as const;
+
+export type MaturityCsvRow = Record<(typeof MATURITY_CSV_COLUMNS)[number], string>;
+
 function parseLine(line: string) {
   const cells: string[] = [];
   let cell = '';
@@ -54,6 +75,21 @@ export function parseCsv(text: string): CsvRow[] {
   });
 }
 
+export function parseMaturityCsv(text: string): MaturityCsvRow[] {
+  const lines = text.replace(/^\uFEFF/, '').trim().split(/\r?\n/);
+  const headers = parseLine(lines.shift() || '');
+  if (headers.join(',') !== MATURITY_CSV_COLUMNS.join(',')) {
+    throw new Error(`Cabecera de vencimientos inesperada: ${headers.join(',')}`);
+  }
+  return lines.filter(Boolean).map((line, rowIndex) => {
+    const cells = parseLine(line);
+    if (cells.length !== MATURITY_CSV_COLUMNS.length) {
+      throw new Error(`Fila ${rowIndex + 2}: se esperaban ${MATURITY_CSV_COLUMNS.length} columnas y hay ${cells.length}`);
+    }
+    return Object.fromEntries(MATURITY_CSV_COLUMNS.map((column, index) => [column, cells[index]])) as MaturityCsvRow;
+  });
+}
+
 function escapeCell(value: unknown) {
   const text = String(value ?? '');
   return /[",\r\n]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
@@ -62,4 +98,9 @@ function escapeCell(value: unknown) {
 export function rowsToCsv(rows: CsvRow[]) {
   const body = rows.map(row => CSV_COLUMNS.map(column => escapeCell(row[column])).join(','));
   return `${CSV_COLUMNS.join(',')}\n${body.join('\n')}\n`;
+}
+
+export function maturityRowsToCsv(rows: MaturityCsvRow[]) {
+  const body = rows.map(row => MATURITY_CSV_COLUMNS.map(column => escapeCell(row[column])).join(','));
+  return `${MATURITY_CSV_COLUMNS.join(',')}\n${body.join('\n')}\n`;
 }

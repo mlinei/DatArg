@@ -45,3 +45,33 @@ export const observations = sqliteTable('observations', {
   index('observations_period_idx').on(table.period),
   index('observations_retrieved_at_idx').on(table.retrievedAt),
 ]);
+
+export const treasuryMaturities = sqliteTable('treasury_maturities', {
+  datasetId: text('dataset_id')
+    .notNull()
+    .references(() => datasets.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
+  seriesId: text('series_id').notNull(),
+  snapshotDate: text('snapshot_date').notNull(),
+  period: text('period').notNull(),
+  frequency: text('frequency').notNull(),
+  serviceType: text('service_type', { enum: ['capital', 'interest'] }).notNull(),
+  category: text('category').notNull(),
+  detailLevel: text('detail_level', { enum: ['total', 'term', 'category', 'detail'] }).notNull(),
+  sourceRow: integer('source_row').notNull(),
+  instrument: text('instrument').notNull(),
+  value: real('value').notNull(),
+  unit: text('unit').notNull(),
+  status: text('status').notNull(),
+  sourceId: text('source_id').notNull(),
+  sourceUrl: text('source_url').notNull(),
+  sourceSha256: text('source_sha256').notNull(),
+  retrievedAt: text('retrieved_at').notNull(),
+  ingestedAt: text('ingested_at').notNull(),
+}, table => [
+  primaryKey({
+    name: 'treasury_maturities_snapshot_service_row_period_pk',
+    columns: [table.snapshotDate, table.serviceType, table.sourceRow, table.period],
+  }),
+  index('treasury_maturities_dataset_id_idx').on(table.datasetId),
+  index('treasury_maturities_snapshot_period_idx').on(table.snapshotDate, table.period),
+]);

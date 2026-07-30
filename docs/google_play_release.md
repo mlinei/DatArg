@@ -3,8 +3,8 @@
 ## Identidad de la aplicación
 
 - Nombre: **DatArg**
-- Nombre del paquete: `ar.fausto.datarg`
-- Versión inicial: `1.0.0` (`versionCode` 1)
+- Nombre del paquete: `com.mlinei.datarg`
+- Versión inicial: `1.0` (`versionCode` 1)
 - Categoría sugerida: Finanzas
 - Correo de soporte: completar con el correo de la cuenta publicadora
 - Política de privacidad: `https://dat-arg.vercel.app/privacidad.html`
@@ -21,7 +21,7 @@ Indicadores económicos de Argentina, actualizados y con fuentes trazables.
 
 DatArg reúne en un solo lugar los principales indicadores de la economía argentina.
 
-Consultá inflación, actividad, producto interno bruto, industria, empleo, salarios, pobreza, comercio exterior, reservas, tipos de cambio, riesgo país, tasas de interés, deuda, recaudación, resultado fiscal e inversión pública.
+Consultá inflación, actividad, producto interno bruto, industria, empleo, salarios, pobreza, comercio exterior, reservas, tipos de cambio, intervención cambiaria, riesgo país, tasas de interés, crédito privado, exposición bancaria al sector público, deuda, recaudación, resultado fiscal e inversión pública.
 
 Cada gráfico permite seleccionar series, comparar componentes y ajustar el período visible. Los datos provienen de organismos públicos y fuentes identificadas en cada indicador. La aplicación conserva la última copia disponible para facilitar la consulta cuando no hay conexión.
 

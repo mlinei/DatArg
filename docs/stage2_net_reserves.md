@@ -29,4 +29,4 @@ Los repos anteriores a junio de 2024 se retroproyectan con el primer saldo ofici
 | 2026-06-30 | 44.873 | 12.335 | 19.143 | 120 | 8.385 | 4.890 |
 | 2026-07-17 | 48.784 | 16.526 | 19.180 | 123 | 2.385 | 10.570 |
 
-Ambas identidades coinciden exactamente con los cuadros publicados por Federico Machado. Los valores preliminares todavía ausentes de la API se preservan como puntos de control explícitos en `data/reference/net_reserves_adjustments.csv`.
+Los valores preliminares todavía ausentes de la API se preservan como puntos de control explícitos en `data/reference/net_reserves_adjustments.csv`.

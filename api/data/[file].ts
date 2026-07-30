@@ -1,7 +1,7 @@
 import { asc, eq } from 'drizzle-orm';
 import { createDatabase } from '../../db/client.js';
-import { datasets, observations, series } from '../../db/schema.js';
-import { rowsToCsv, type CsvRow } from '../../scripts/db/csv.js';
+import { datasets, observations, series, treasuryMaturities } from '../../db/schema.js';
+import { maturityRowsToCsv, rowsToCsv, type CsvRow, type MaturityCsvRow } from '../../scripts/db/csv.js';
 
 const FILE_PATTERN = /^[a-z0-9_-]+\.csv$/;
 const CORS_HEADERS = {
@@ -15,7 +15,8 @@ export function OPTIONS() {
 }
 
 export async function GET(request: Request) {
-  const fileName = decodeURIComponent(new URL(request.url).pathname.split('/').at(-1) || '');
+  const pathParts = new URL(request.url).pathname.split('/');
+  const fileName = decodeURIComponent(pathParts[pathParts.length - 1] || '');
   if (!FILE_PATTERN.test(fileName)) {
     return Response.json({ error: 'Dataset inválido' }, { status: 400, headers: CORS_HEADERS });
   }
@@ -32,6 +33,41 @@ export async function GET(request: Request) {
       return Response.json({ error: 'Dataset en actualización' }, {
         status: 503,
         headers: { ...CORS_HEADERS, 'Cache-Control': 'no-store', 'Retry-After': '60' },
+      });
+    }
+    if (fileName === 'treasury_maturities.csv') {
+      const stored = await database.db.select({
+        series_id: treasuryMaturities.seriesId,
+        snapshot_date: treasuryMaturities.snapshotDate,
+        period: treasuryMaturities.period,
+        frequency: treasuryMaturities.frequency,
+        service_type: treasuryMaturities.serviceType,
+        category: treasuryMaturities.category,
+        detail_level: treasuryMaturities.detailLevel,
+        source_row: treasuryMaturities.sourceRow,
+        instrument: treasuryMaturities.instrument,
+        value: treasuryMaturities.value,
+        unit: treasuryMaturities.unit,
+        status: treasuryMaturities.status,
+        source_id: treasuryMaturities.sourceId,
+        source_url: treasuryMaturities.sourceUrl,
+        source_sha256: treasuryMaturities.sourceSha256,
+        retrieved_at: treasuryMaturities.retrievedAt,
+      }).from(treasuryMaturities)
+        .where(eq(treasuryMaturities.datasetId, dataset.id))
+        .orderBy(
+          asc(treasuryMaturities.snapshotDate), asc(treasuryMaturities.period),
+          asc(treasuryMaturities.serviceType), asc(treasuryMaturities.sourceRow),
+        );
+      return new Response(maturityRowsToCsv(stored.map(row =>
+        Object.fromEntries(Object.entries(row).map(([key, value]) => [key, String(value)]))
+      ) as MaturityCsvRow[]), {
+        headers: {
+          ...CORS_HEADERS,
+          'Content-Type': 'text/csv; charset=utf-8',
+          'Cache-Control': 'public, max-age=300, s-maxage=300, stale-while-revalidate=86400',
+          ETag: `"${dataset.contentSha256}"`,
+        },
       });
     }
 

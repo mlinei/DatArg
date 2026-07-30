@@ -73,15 +73,19 @@ jobs:
           aed real-exchange-rate
           aed markets
           aed country-risk
+          aed fx-intervention
           aed interest-rates
 
       - name: Actualizar inflación
         if: steps.frequency.outputs.scope == 'monthly' || steps.frequency.outputs.scope == 'all'
         run: |
           aed inflation
+          aed gdp
           aed wages
           aed fiscal
           aed public-investment
+          aed credit
+          aed debt-maturities
 
       - name: Validar pipelines
         run: |

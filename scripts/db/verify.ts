@@ -4,8 +4,8 @@ import { readFile, readdir } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { asc, eq } from 'drizzle-orm';
 import { createDatabase } from '../../db/client.js';
-import { datasets, observations, series } from '../../db/schema.js';
-import { CSV_COLUMNS, parseCsv } from './csv.js';
+import { datasets, observations, series, treasuryMaturities } from '../../db/schema.js';
+import { CSV_COLUMNS, MATURITY_CSV_COLUMNS, parseCsv, parseMaturityCsv } from './csv.js';
 
 const sourceDirectory = resolve(process.argv[2] || 'data/processed');
 const files = (await readdir(sourceDirectory)).filter(file => file.endsWith('.csv')).sort();
@@ -15,6 +15,52 @@ let verifiedRows = 0;
 try {
   for (const fileName of files) {
     const sourceText = await readFile(resolve(sourceDirectory, fileName), 'utf8');
+    if (fileName === 'treasury_maturities.csv') {
+      const sourceRows = parseMaturityCsv(sourceText);
+      const [dataset] = await db.select().from(datasets).where(eq(datasets.fileName, fileName));
+      if (!dataset || dataset.importStatus !== 'ready') throw new Error(`${fileName}: dataset ausente o incompleto`);
+      const checksum = createHash('sha256').update(sourceText).digest('hex');
+      if (dataset.rowCount !== sourceRows.length || dataset.contentSha256 !== checksum) {
+        throw new Error(`${fileName}: metadatos no coinciden`);
+      }
+      const stored = await db.select({
+        series_id: treasuryMaturities.seriesId,
+        snapshot_date: treasuryMaturities.snapshotDate,
+        period: treasuryMaturities.period,
+        frequency: treasuryMaturities.frequency,
+        service_type: treasuryMaturities.serviceType,
+        category: treasuryMaturities.category,
+        detail_level: treasuryMaturities.detailLevel,
+        source_row: treasuryMaturities.sourceRow,
+        instrument: treasuryMaturities.instrument,
+        value: treasuryMaturities.value,
+        unit: treasuryMaturities.unit,
+        status: treasuryMaturities.status,
+        source_id: treasuryMaturities.sourceId,
+        source_url: treasuryMaturities.sourceUrl,
+        source_sha256: treasuryMaturities.sourceSha256,
+        retrieved_at: treasuryMaturities.retrievedAt,
+      }).from(treasuryMaturities)
+        .where(eq(treasuryMaturities.datasetId, dataset.id))
+        .orderBy(
+          asc(treasuryMaturities.snapshotDate), asc(treasuryMaturities.period),
+          asc(treasuryMaturities.serviceType), asc(treasuryMaturities.sourceRow),
+        );
+      if (stored.length !== sourceRows.length) throw new Error(`${fileName}: cantidad de filas no coincide`);
+      for (let index = 0; index < sourceRows.length; index += 1) {
+        for (const column of MATURITY_CSV_COLUMNS) {
+          const sourceValue = sourceRows[index][column];
+          const storedValue = String(stored[index][column]);
+          const matches = ['value', 'source_row'].includes(column)
+            ? Number(sourceValue) === Number(storedValue)
+            : sourceValue === storedValue;
+          if (!matches) throw new Error(`${fileName}: diferencia en fila ${index + 2}, columna ${column}`);
+        }
+      }
+      verifiedRows += stored.length;
+      console.log(`${fileName}: verificado`);
+      continue;
+    }
     const sourceRows = parseCsv(sourceText);
     const [dataset] = await db.select().from(datasets).where(eq(datasets.fileName, fileName));
     if (!dataset) throw new Error(`${fileName}: dataset ausente en Turso`);

@@ -114,6 +114,14 @@ aed country-risk
 
 Importa la evolución diaria reportada del riesgo país argentino, en puntos básicos. La salida queda en `data/processed/country_risk.csv`.
 
+## Intervención cambiaria
+
+```bash
+aed fx-intervention
+```
+
+Importa las compras y ventas netas de divisas del BCRA en el mercado de cambios y calcula sus acumulados por mes y año calendario. Los valores positivos representan compras netas y los negativos, ventas netas. La unidad es millones de dólares y la serie oficial excluye las operaciones directas con el Tesoro Nacional. La salida queda en `data/processed/fx_intervention.csv`.
+
 ## Tasas de interés
 
 ```bash
@@ -121,6 +129,14 @@ aed interest-rates
 ```
 
 Importa BADLAR y TAMAR de bancos privados, tanto TNA como TEA, desde la API v4 oficial del BCRA. La salida queda en `data/processed/interest_rates.csv`.
+
+## Crédito privado y exposición al sector público
+
+```bash
+aed credit
+```
+
+Importa del BCRA los préstamos al sector privado no financiero y los préstamos al sector público, separados entre gobiernos y empresas u otros entes públicos. También calcula una exposición pública ampliada que suma esos préstamos y los títulos de los gobiernos nacional, provinciales y municipales en poder de las entidades financieras, excluyendo Letras y Notas del BCRA. Conserva los niveles nominales para trazabilidad y publica dos vistas comparables: índice real deflactado por IPC con base diciembre de 2019 = 100 y saldo como porcentaje del PIB nominal anualizado de los últimos cuatro trimestres. La salida queda en `data/processed/credit.csv`.
 
 ## Recaudación y resultado fiscal
 
@@ -153,6 +169,14 @@ aed public-debt
 ```
 
 Publica por separado la deuda bruta de la Administración Central y los pasivos financieros remunerados del BCRA. El nivel del Tesoro incluye cierres anuales desde 2013 y datos mensuales desde 2019; también incorpora la relación oficial deuda/PIB desde 2000. No calcula ni presenta una suma consolidada. La salida queda en `data/processed/public_debt.csv`.
+
+## Esquema de vencimientos del Tesoro
+
+```bash
+aed debt-maturities
+```
+
+Importa de la última planilla trimestral de la Secretaría de Finanzas el cronograma mensual proyectado de capital e intereses de la Administración Central, expresado en millones de USD. Conserva cada fecha de corte, el total, los grupos principales y el detalle por instrumento; por eso no debe interpretarse como pagos efectivamente realizados. La salida queda en `data/processed/treasury_maturities.csv`.
 
 ## Reservas internacionales brutas
 

@@ -4,9 +4,6 @@
 
 - Nombre: DatArg
 - Subtítulo: Economía argentina en datos
-- Apple ID: 6793578391
-- SKU: ar.fausto.datarg
-- Identificador de paquete: ar.fausto.datarg
 - Categoría principal: Finanzas
 - Categoría secundaria: Noticias
 - Idioma principal: Español (Argentina)
@@ -23,7 +20,7 @@ argentina,economía,inflación,dólar,pbi,empleo,indec,bcra,reservas,riesgo paí
 
 DatArg reúne en un solo lugar los principales indicadores de la economía argentina.
 
-Explorá series históricas de inflación, actividad, PBI, empleo, pobreza, industria, comercio exterior, salarios, tipo de cambio, tasas de interés, reservas, deuda, resultado fiscal, recaudación y otros indicadores relevantes.
+Explorá series históricas de inflación, actividad, PBI, empleo, pobreza, industria, comercio exterior, salarios, tipo de cambio, intervención cambiaria, tasas de interés, crédito privado, exposición bancaria al sector público, reservas, deuda, resultado fiscal, recaudación y otros indicadores relevantes.
 
 Cada gráfico permite seleccionar series, ajustar el período visible y consultar la fuente original de los datos. La aplicación se actualiza a partir de publicaciones oficiales y permite activar alertas para recibir avisos cuando se incorporan nuevos datos.
 

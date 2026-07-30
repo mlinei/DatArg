@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0.0",
-  "researched_at": "2026-07-10",
+  "researched_at": "2026-07-30",
   "stage": "research_only",
   "sources": [
     {
@@ -121,6 +121,44 @@
       "revision_history": "Updated in place.",
       "break_risks": ["fixed-width/schema change", "instrument discontinuity"],
       "methodology_notes": "Fallback and cross-check for API v4."
+    },
+    {
+      "source_id": "bcra_fx_market_intervention",
+      "organization": "BCRA",
+      "module": "fx_intervention",
+      "series": ["bcra_fx_intervention_daily", "bcra_fx_intervention_monthly", "bcra_fx_intervention_annual"],
+      "landing_url": "https://www.bcra.gob.ar/apis-banco-central/",
+      "resource_url": "https://api.bcra.gob.ar/estadisticas/v4.0/Monetarias/78",
+      "format": "json_api",
+      "frequency": ["daily", "monthly_calculated", "annual_calculated"],
+      "available_from": "2003-01-02",
+      "latest_at_research": "2026-07-24",
+      "unit": "million_usd",
+      "automation_type": "automatic",
+      "revision_history": "La observación diaria oficial puede ser revisada por el BCRA; los acumulados se recalculan en cada ejecución.",
+      "break_risks": ["API version change", "variable identifier change", "historical revision"],
+      "methodology_notes": "Compras netas positivas y ventas netas negativas. La variable oficial excluye operaciones directas del BCRA con el Tesoro Nacional."
+    },
+    {
+      "source_id": "bcra_financial_system_credit",
+      "organization": "BCRA",
+      "module": "credit",
+      "series": ["bcra_private_nonfinancial_credit", "bcra_public_loans_government", "bcra_public_loans_enterprises", "bcra_public_loans_total", "bcra_public_exposure_securities", "bcra_public_exposure_total"],
+      "landing_url": "https://www.bcra.gob.ar/prestamos-y-otros-activos-de-las-entidades-financieras/",
+      "resource_url": [
+        "https://www.bcra.gob.ar/archivos/Pdfs/PublicacionesEstadisticas/perser_priv.xls",
+        "https://www.bcra.gob.ar/archivos/Pdfs/PublicacionesEstadisticas/perser_pub.xls",
+        "https://www.bcra.gob.ar/archivos/Pdfs/PublicacionesEstadisticas/titpubser.xls"
+      ],
+      "format": "xls",
+      "frequency": "monthly",
+      "available_from": "1989-12",
+      "latest_at_research": "2026-05",
+      "unit": ["million_ars_current", "percent_change_nominal"],
+      "automation_type": "automatic",
+      "revision_history": "Los archivos oficiales se actualizan en el mismo recurso y pueden revisar observaciones previas.",
+      "break_risks": ["workbook layout change", "sheet or column change", "historical revision"],
+      "methodology_notes": "La exposición ampliada suma préstamos al sector público y títulos de los gobiernos nacional, provinciales y municipales en poder de las entidades financieras. Excluye títulos emitidos por el BCRA."
     },
     {
       "source_id": "imf_argentina_2025_tmu",

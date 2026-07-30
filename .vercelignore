@@ -1,0 +1,26 @@
+# Local dependencies and environments
+node_modules
+.venv
+.pytest_cache
+
+# Native applications and generated native builds
+android
+ios
+
+# Local checkpoints and raw source-data workspace
+.checkpoints
+data/raw
+
+# Generated output (Vercel rebuilds it from web/)
+dist
+
+# Store material and development-only assets
+store-assets
+assets
+icons
+docs
+tests
+
+# Local configuration and secrets
+.env.local
+.DS_Store

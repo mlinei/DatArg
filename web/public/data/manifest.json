@@ -2,9 +2,11 @@
   "files": [
     "consolidated_debt.csv",
     "country_risk.csv",
+    "credit.csv",
     "emae.csv",
     "exchange_rates.csv",
     "fiscal.csv",
+    "fx_intervention.csv",
     "gdp.csv",
     "industry.csv",
     "inflation.csv",
@@ -18,7 +20,8 @@
     "real_exchange_rate.csv",
     "reserves.csv",
     "trade.csv",
+    "treasury_maturities.csv",
     "wages.csv"
   ],
-  "generatedAt": "2026-07-30T00:58:33.085Z"
+  "generatedAt": "2026-07-30T18:18:20.917Z"
 }
