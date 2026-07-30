@@ -4,8 +4,8 @@ import { readFile, readdir } from 'node:fs/promises';
 import { basename, resolve } from 'node:path';
 import { eq, sql } from 'drizzle-orm';
 import { createDatabase } from '../../db/client.js';
-import { datasets, observations, series } from '../../db/schema.js';
-import { parseCsv } from './csv.js';
+import { datasets, observations, series, treasuryMaturities } from '../../db/schema.js';
+import { parseCsv, parseMaturityCsv } from './csv.js';
 
 const sourceDirectory = resolve(process.argv[2] || 'data/processed');
 const requestedFiles = process.argv.slice(3);
@@ -25,6 +25,56 @@ try {
   for (const fileName of files) {
     const datasetId = fileName.replace(/\.csv$/, '');
     const file = await readFile(resolve(sourceDirectory, fileName), 'utf8');
+    if (fileName === 'treasury_maturities.csv') {
+      const rows = parseMaturityCsv(file);
+      if (!rows.length) throw new Error(`${fileName} no contiene vencimientos`);
+      const checksum = createHash('sha256').update(file).digest('hex');
+      const datasetStatement = db.insert(datasets).values({
+        id: datasetId, fileName, contentSha256: checksum, rowCount: rows.length,
+        importStatus: 'importing', updatedAt: importedAt,
+      }).onConflictDoUpdate({
+        target: datasets.id,
+        set: { fileName, importStatus: 'importing', updatedAt: importedAt },
+      });
+      await db.batch([
+        datasetStatement,
+        db.delete(treasuryMaturities).where(eq(treasuryMaturities.datasetId, datasetId)),
+      ]);
+      for (let offset = 0; offset < rows.length; offset += 250) {
+        const chunk = rows.slice(offset, offset + 250).map(row => ({
+          datasetId,
+          seriesId: row.series_id,
+          snapshotDate: row.snapshot_date,
+          period: row.period,
+          frequency: row.frequency,
+          serviceType: row.service_type as 'capital' | 'interest',
+          category: row.category,
+          detailLevel: row.detail_level as 'total' | 'term' | 'category' | 'detail',
+          sourceRow: Number(row.source_row),
+          instrument: row.instrument,
+          value: Number(row.value),
+          unit: row.unit,
+          status: row.status,
+          sourceId: row.source_id,
+          sourceUrl: row.source_url,
+          sourceSha256: row.source_sha256,
+          retrievedAt: row.retrieved_at,
+          ingestedAt: importedAt,
+        }));
+        if (chunk.some(row => !Number.isFinite(row.value) || !Number.isInteger(row.sourceRow))) {
+          throw new Error(`${fileName} contiene valores no numéricos`);
+        }
+        await db.insert(treasuryMaturities).values(chunk);
+      }
+      const [{ count }] = await db.select({ count: sql<number>`count(*)` })
+        .from(treasuryMaturities).where(eq(treasuryMaturities.datasetId, datasetId));
+      if (Number(count) !== rows.length) throw new Error(`${fileName}: Turso tiene ${count} filas y el CSV ${rows.length}`);
+      await db.update(datasets).set({
+        contentSha256: checksum, rowCount: rows.length, importStatus: 'ready', updatedAt: importedAt,
+      }).where(eq(datasets.id, datasetId));
+      console.log(`${fileName}: ${rows.length} vencimientos`);
+      continue;
+    }
     const rows = parseCsv(file);
     if (!rows.length) throw new Error(`${fileName} no contiene observaciones`);
 

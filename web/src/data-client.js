@@ -9,12 +9,27 @@ const DATA_BASE = configuredBase || (nativeRuntime ? 'https://dat-arg.vercel.app
 const FALLBACK_DATA_BASE = nativeRuntime ? 'https://dat-arg.vercel.app/data' : '/data';
 
 export function parseCSV(text) {
-  const lines = text.trim().split(/\r?\n/);
-  const headers = lines.shift()?.split(',') || [];
-  return lines.map(line => {
-    const cells = line.split(',');
-    return Object.fromEntries(headers.map((header, index) => [header, cells[index]]));
-  });
+  const records = [];
+  let record = [], cell = '', quoted = false;
+  const source = text.replace(/^\uFEFF/, '').trim();
+  for (let index = 0; index <= source.length; index += 1) {
+    const character = source[index] ?? '\n';
+    if (character === '"') {
+      if (quoted && source[index + 1] === '"') { cell += '"'; index += 1; }
+      else quoted = !quoted;
+    } else if (character === ',' && !quoted) {
+      record.push(cell); cell = '';
+    } else if ((character === '\n' || character === '\r') && !quoted) {
+      if (character === '\r' && source[index + 1] === '\n') index += 1;
+      record.push(cell); cell = '';
+      if (record.some(value => value !== '')) records.push(record);
+      record = [];
+    } else {
+      cell += character;
+    }
+  }
+  const headers = records.shift() || [];
+  return records.map(cells => Object.fromEntries(headers.map((header, index) => [header, cells[index] ?? ''])));
 }
 
 function openDatabase() {

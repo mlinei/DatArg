@@ -16,6 +16,7 @@ function human(value, unit) {
 }
 function sourceName(row) {
   const id = row?.source_id || '';
+  if (id.startsWith('datarg_bcra_credit_')) return 'DatArg sobre BCRA e INDEC';
   if (id.startsWith('indec_')) return 'INDEC';
   if (id.startsWith('bcra_')) return 'BCRA';
   if (id.startsWith('datarg_bcra_')) return 'DatArg sobre fuentes BCRA, FMI y BCE';
@@ -86,17 +87,100 @@ function downloadTableCSV(model, title) {
   link.download = `${title.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'')}.csv`;
   document.body.append(link); link.click(); link.remove(); setTimeout(()=>URL.revokeObjectURL(link.href),1000);
 }
+const escapeHTML = value => String(value ?? '').replace(/[&<>"']/g, character => ({
+  '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'
+})[character]);
+const maturityCategories = {
+  loans: { label: 'Préstamos', color: '#59a7ff' },
+  bcra_advances: { label: 'Adelantos BCRA', color: '#47d4f5' },
+  securities: { label: 'Títulos y Letras', color: '#8b83ff' },
+};
+function downloadMaturityCSV(rows, title) {
+  const escape = value => `"${String(value ?? '').replaceAll('"','""')}"`;
+  const records = [
+    ['Fecha de corte','Período','Servicio','Grupo','Renglón oficial','Millones de USD'],
+    ...rows.map(row=>[row.snapshot_date,row.period,row.service_type==='capital'?'Capital':'Intereses',maturityCategories[row.category]?.label||row.category,row.instrument,row.value])
+  ];
+  const link=document.createElement('a');
+  link.href=URL.createObjectURL(new Blob([`\uFEFF${records.map(record=>record.map(escape).join(',')).join('\r\n')}`],{type:'text/csv;charset=utf-8'}));
+  link.download=`${title}.csv`;document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(link.href),1000);
+}
+function renderMaturityChart(container, rows, chart) {
+  const snapshots=[...new Set(rows.map(row=>row.snapshot_date))].sort();
+  const snapshot=container.dataset.snapshot||snapshots.at(-1);
+  const service=container.dataset.service||'total';
+  const view=container.dataset.view||'chart';
+  const snapshotRows=rows.filter(row=>row.snapshot_date===snapshot);
+  const periods=[...new Set(snapshotRows.map(row=>row.period))].sort();
+  const detailPeriod=container.dataset.detailPeriod||periods.find(period=>period>=new Date().toISOString().slice(0,7))||periods[0];
+  const categories=Object.keys(maturityCategories);
+  const categoryRows=snapshotRows.filter(row=>row.detail_level==='category'&&(service==='total'||row.service_type===service));
+  const values=new Map();
+  categoryRows.forEach(row=>{
+    const key=`${row.period}\0${row.category}`;
+    values.set(key,(values.get(key)||0)+Number(row.value));
+  });
+  const totals=periods.map(period=>({
+    period,
+    categories:Object.fromEntries(categories.map(category=>[category,values.get(`${period}\0${category}`)||0])),
+  })).map(row=>({...row,total:Object.values(row.categories).reduce((sum,value)=>sum+value,0)}));
+  const next=totals.find(row=>row.period>=new Date().toISOString().slice(0,7))||totals[0];
+  const detailRows=snapshotRows.filter(row=>row.period===detailPeriod&&row.detail_level==='detail'&&Number(row.value)>0&&(service==='total'||row.service_type===service))
+    .sort((a,b)=>Number(b.value)-Number(a.value));
+  const W=900,H=390,L=94,R=22,T=25,B=70;
+  const max=Math.max(...totals.map(row=>row.total),1)*1.12;
+  const x=index=>L+index*(W-L-R)/totals.length;
+  const barWidth=Math.max(10,(W-L-R)/totals.length*.72);
+  const y=value=>T+(max-value)/max*(H-T-B);
+  const ticks=Array.from({length:5},(_,index)=>max*index/4);
+  let bars='';
+  totals.forEach((row,index)=>{
+    let bottom=0;
+    categories.forEach(category=>{
+      const value=row.categories[category];
+      if(value<=0)return;
+      const top=bottom+value;
+      bars+=`<rect class="maturity-bar" data-period="${row.period}" x="${x(index).toFixed(1)}" y="${y(top).toFixed(1)}" width="${barWidth.toFixed(1)}" height="${Math.max(1,y(bottom)-y(top)).toFixed(1)}" fill="${maturityCategories[category].color}"/>`;
+      bottom=top;
+    });
+  });
+  const serviceOptions={total:'Capital + intereses',capital:'Capital',interest:'Intereses'};
+  const snapshotLabel=value=>value.split('-').reverse().join('/');
+  const selectors=`<div class="chart-selectors"><label>Servicio<select class="maturity-service">${Object.entries(serviceOptions).map(([key,label])=>`<option value="${key}" ${service===key?'selected':''}>${label}</option>`).join('')}</select></label><label>Informe al<select class="maturity-snapshot">${snapshots.map(value=>`<option value="${value}" ${snapshot===value?'selected':''}>${snapshotLabel(value)}</option>`).join('')}</select></label></div>`;
+  const viewControls=`<div class="view-toggle" role="group"><button data-view="chart" class="${view==='chart'?'active':''}">Gráfico</button><button data-view="table" class="${view==='table'?'active':''}">Instrumentos</button></div>`;
+  const visual=view==='chart'?`<div class="chart-wrap maturity-chart"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${chart.title}">
+    ${ticks.map(value=>`<line x1="${L}" x2="${W-R}" y1="${y(value)}" y2="${y(value)}"/><text x="${L-10}" y="${y(value)+4}" text-anchor="end">${Math.round(value).toLocaleString('es-AR')}</text>`).join('')}
+    ${bars}
+    ${totals.map((row,index)=>index%3===0||index===totals.length-1?`<text x="${x(index)+barWidth/2}" y="${H-18}" text-anchor="middle">${row.period.slice(5)}/${row.period.slice(2,4)}</text>`:'').join('')}
+  </svg><div class="tooltip"></div></div>`:`<div class="maturity-table-controls"><label>Mes<select class="maturity-period">${periods.map(period=>`<option value="${period}" ${period===detailPeriod?'selected':''}>${period}</option>`).join('')}</select></label><button class="maturity-download">Descargar CSV ↓</button></div>
+  <div class="data-table-scroll maturity-table"><table><thead><tr><th>Tipo</th><th>Grupo</th><th>Renglón oficial</th><th>USD M</th></tr></thead><tbody>${detailRows.map(row=>`<tr><td>${row.service_type==='capital'?'Capital':'Intereses'}</td><td>${maturityCategories[row.category]?.label||'—'}</td><td>${escapeHTML(row.instrument)}</td><td>${Number(row.value).toLocaleString('es-AR',{maximumFractionDigits:1})}</td></tr>`).join('')}</tbody></table></div><p class="maturity-note">La apertura reproduce los renglones del informe oficial; algunos son subtotales jerárquicos y no deben sumarse entre sí.</p>`;
+  const source=snapshotRows[0];
+  container.innerHTML=`<div class="chart-head"><div><h3>${chart.title}</h3><p>${chart.subtitle}</p></div><div class="chart-actions">${selectors}${viewControls}</div></div>
+    <div class="latest-row maturity-summary"><div><i style="background:#59a7ff"></i><span>${next.period}</span><strong>${human(next.total,'USD M')}</strong><small>Próximo mes del cronograma</small></div><div><span>Fecha de corte</span><strong>${snapshotLabel(snapshot)}</strong><small>Stock y tipo de cambio del informe</small></div></div>
+    ${visual}
+    <div class="chart-foot"><div class="legend">${categories.map(category=>`<span><i style="background:${maturityCategories[category].color}"></i>${maturityCategories[category].label}</span>`).join('')}</div></div>
+    <div class="source-citation"><span>Fuente:</span><a href="${source.source_url}" target="_blank" rel="noreferrer">Ministerio de Economía ↗</a></div>`;
+  container.querySelector('.maturity-service').onchange=event=>{container.dataset.service=event.target.value;renderMaturityChart(container,rows,chart)};
+  container.querySelector('.maturity-snapshot').onchange=event=>{container.dataset.snapshot=event.target.value;delete container.dataset.detailPeriod;renderMaturityChart(container,rows,chart)};
+  container.querySelectorAll('[data-view]').forEach(button=>button.onclick=()=>{container.dataset.view=button.dataset.view;renderMaturityChart(container,rows,chart)});
+  const periodSelect=container.querySelector('.maturity-period');if(periodSelect)periodSelect.onchange=event=>{container.dataset.detailPeriod=event.target.value;renderMaturityChart(container,rows,chart)};
+  const download=container.querySelector('.maturity-download');if(download)download.onclick=()=>downloadMaturityCSV(detailRows,'vencimientos-tesoro');
+  const svg=container.querySelector('svg'),tip=container.querySelector('.tooltip');
+  if(svg)svg.onpointermove=event=>{const target=event.target.closest('.maturity-bar');if(!target){tip.style.opacity=0;return}const row=totals.find(item=>item.period===target.dataset.period);tip.innerHTML=`<b>${row.period}</b>${categories.map(category=>`<span>${maturityCategories[category].label}: ${human(row.categories[category],'USD M')}</span>`).join('')}<strong>Total: ${human(row.total,'USD M')}</strong>`;tip.style.opacity=1;tip.style.left=`${Math.min(78,Math.max(8,event.offsetX/svg.clientWidth*100))}%`};
+  if(svg)svg.onpointerleave=()=>{tip.style.opacity=0};
+}
 function renderChart(container, rows, chart) {
   const availableSeries = chartSeries(chart); const range = container.dataset.range || chart.defaultRange || 'ALL';
   const seriesEntries = Object.entries(availableSeries);
   const colorFor = id => COLORS[Math.max(0, seriesEntries.findIndex(([seriesId])=>seriesId===id)) % COLORS.length];
-  if (!visibility.has(chart)) visibility.set(chart, new Set((chart.defaultVisible || Object.keys(availableSeries)).filter(id=>availableSeries[id])));
+  const toggleMetric = chart.metricToggle ? (state.get(chart) || chart.metricToggle.default) : null;
+  const defaultVisible = chart.defaultVisibleByMetric?.[toggleMetric] || chart.defaultVisible || Object.keys(availableSeries);
+  if (!visibility.has(chart)) visibility.set(chart, new Set(defaultVisible.filter(id=>availableSeries[id])));
   const visible = visibility.get(chart); const availableIds = new Set(Object.keys(availableSeries));
   for (const id of [...visible]) if (!availableIds.has(id)) visible.delete(id);
   if (![...visible].some(id=>availableIds.has(id))) Object.keys(availableSeries).forEach(id=>visible.add(id));
   const selectedSeries = Object.fromEntries(Object.entries(availableSeries).filter(([id])=>visible.has(id)));
   const compositeState = chart.composite ? (state.get(chart) || { sector: chart.composite.defaultSector, metric: chart.composite.defaultMetric }) : null;
-  const toggleMetric = chart.metricToggle ? (state.get(chart) || chart.metricToggle.default) : null;
   const displayUnit = chart.metricToggle?.units?.[toggleMetric] || chart.composite?.units?.[compositeState?.metric] || ((chart.composite && compositeState.metric === 'yoy') || toggleMetric === 'mom' ? '%' : chart.unit);
   const allSelectedPoints = rows.filter(r => selectedSeries[r.series_id]).map(r => ({...r, rawValue:r.value, date:+periodDate(r.period), value:+r.value})).filter(r=>Number.isFinite(r.value)).sort((a,b)=>a.date-b.date);
   const coverageDates = [...new Set(allSelectedPoints.map(p=>p.date))];
@@ -108,9 +192,11 @@ function renderChart(container, rows, chart) {
   const xs=points.map(p=>p.date), ys=points.map(p=>p.value); let minX=Math.min(...xs), maxX=Math.max(...xs), minY=Math.min(...ys), maxY=Math.max(...ys);
   if (!points.length) { container.innerHTML='<p class="empty">Sin datos disponibles.</p>'; return; }
   if (minX===maxX) { minX-=1; maxX+=1; } if (chart.includeZero) { minY=Math.min(minY,0); maxY=Math.max(maxY,0); } if(minY===maxY){minY-=1;maxY+=1} const pad=(maxY-minY)*.12; minY-=pad;maxY+=pad;
-  const W=900,H=360,L=62,R=18,T=28,B=46; const x=v=>L+(v-minX)/(maxX-minX)*(W-L-R), y=v=>T+(maxY-v)/(maxY-minY)*(H-T-B);
+  const W=900,H=390,L=126,R=22,T=30,B=66; const x=v=>L+(v-minX)/(maxX-minX)*(W-L-R), y=v=>T+(maxY-v)/(maxY-minY)*(H-T-B);
   const ticks=Array.from({length:5},(_,i)=>minY+(maxY-minY)*i/4);
-  const paths=latest.map(s=>{const list=points.filter(p=>p.series_id===s.id).sort((a,b)=>a.date-b.date);return `<path class="series-line" stroke="${s.color}" d="${list.map((p,i)=>`${i?'L':'M'}${x(p.date).toFixed(1)},${y(p.value).toFixed(1)}`).join(' ')}"/>`;}).join('');
+  const visuals=chart.type==='bar'
+    ? latest.map(s=>{const list=points.filter(p=>p.series_id===s.id).sort((a,b)=>a.date-b.date);const width=Math.max(.8,Math.min(18,(W-L-R)/Math.max(1,list.length)*.76));const zero=y(0);return list.map(p=>`<rect class="series-bar" fill="${s.color}" x="${(x(p.date)-width/2).toFixed(1)}" y="${Math.min(y(p.value),zero).toFixed(1)}" width="${width.toFixed(1)}" height="${Math.max(1,Math.abs(zero-y(p.value))).toFixed(1)}"/>`).join('')}).join('')
+    : latest.map(s=>{const list=points.filter(p=>p.series_id===s.id).sort((a,b)=>a.date-b.date);return `<path class="series-line" stroke="${s.color}" d="${list.map((p,i)=>`${i?'L':'M'}${x(p.date).toFixed(1)},${y(p.value).toFixed(1)}`).join(' ')}"/>`;}).join('');
   const titleControls = chart.composite ? `<div class="chart-selectors"><label>Vista<select class="metric-select">${Object.entries(chart.composite.metrics).map(([k,v])=>`<option value="${k}" ${compositeState.metric===k?'selected':''}>${v}</option>`).join('')}</select></label><label>${chart.composite.dimensionLabel || 'Rama'}<select class="sector-select">${Object.entries(chart.composite.sectors).map(([k,v])=>`<option value="${k}" ${compositeState.sector===k?'selected':''}>${v}</option>`).join('')}</select></label></div>` : chart.metricToggle ? `<div class="chart-selectors"><label>Vista<select class="toggle-metric-select">${Object.entries(chart.metricToggle.labels).map(([k,v])=>`<option value="${k}" ${toggleMetric===k?'selected':''}>${v}</option>`).join('')}</select></label></div>` : chart.selector ? `<select class="chart-select">${Object.entries(chart.selector).map(([k,v])=>`<option value="${k}" ${(state.get(chart)||chart.selected)===k?'selected':''}>${v}</option>`).join('')}</select>` : chart.regionSelector ? `<select class="chart-select">${Object.entries(chart.regionSelector).map(([k,v])=>`<option value="${k}" ${(state.get(chart)||chart.region)===k?'selected':''}>${v}</option>`).join('')}</select>`:'';
   const viewControls = `<div class="view-toggle" role="group" aria-label="Formato de visualización"><button type="button" data-view="chart" class="${viewMode==='chart'?'active':''}" aria-pressed="${viewMode==='chart'}">Gráfico</button><button type="button" data-view="table" class="${viewMode==='table'?'active':''}" aria-pressed="${viewMode==='table'}">Tabla</button></div>`;
   const sources = [...new Map(allSelectedPoints.map(row => [sourceName(row), row])).values()].filter(row=>row.source_url);
@@ -123,7 +209,7 @@ function renderChart(container, rows, chart) {
   const periodLabel = d => { const value=new Date(d); return annualCoverage || value.getUTCFullYear()!==new Date(lastCoverage).getUTCFullYear() ? `${value.getUTCFullYear()}` : `${value.getUTCMonth()+1}/${value.getUTCFullYear()}`; };
   const visualContent = viewMode === 'table' ? tableHTML(tableModel, displayUnit, tableLimit) : `<div class="chart-wrap"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${chart.title}">
       ${ticks.map(v=>`<line x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}"/><text x="${L-10}" y="${y(v)+4}" text-anchor="end">${human(v,displayUnit).replace('USD ','')}</text>`).join('')}
-      ${paths}<rect class="hover-zone" x="${L}" y="${T}" width="${W-L-R}" height="${H-T-B}"/><line class="crosshair" y1="${T}" y2="${H-B}"/><circle class="hover-dot" r="4"/>
+      ${visuals}<rect class="hover-zone" x="${L}" y="${T}" width="${W-L-R}" height="${H-T-B}"/><line class="crosshair" y1="${T}" y2="${H-B}"/><circle class="hover-dot" r="4"/>
       <text x="${L}" y="${H-15}">${new Date(minX).getUTCFullYear()}</text><text x="${W-R}" y="${H-15}" text-anchor="end">${new Date(maxX).getUTCFullYear()}</text>
     </svg><div class="tooltip"></div></div>`;
   container.innerHTML=`<div class="chart-head"><div><h3>${chart.title}</h3><p>${chart.subtitle}</p></div><div class="chart-actions">${titleControls}${viewControls}</div></div>
@@ -153,16 +239,22 @@ function renderChart(container, rows, chart) {
 
 function sectionHTML(section,index){return `<section id="${section.id}" class="data-section"><div class="section-number">${String(index+1).padStart(2,'0')}</div><header class="section-title"><span>${section.eyebrow}</span><h2>${section.title}</h2><p>${section.intro}</p>${section.warning?`<aside>${section.warning}</aside>`:''}</header><div class="charts">${section.charts.map(()=>'<article class="chart-card loading">Cargando datos…</article>').join('')}</div></section>`}
 
-document.querySelector('#app').innerHTML=`<header class="topbar"><a class="brand" href="#inicio" aria-label="DatArg — volver al inicio"><span class="brand-logo"><img src="/datarg-logo.png" alt="DatArg"></span></a><div class="graph-picker"><button type="button" aria-expanded="false" aria-controls="graph-menu">Seleccionar gráfico <span>⌄</span></button><nav id="graph-menu" aria-label="Indicadores">${sections.map(s=>`<a href="#${s.id}">${s.title}</a>`).join('')}</nav></div><div class="live"><i></i>Datos públicos</div></header>
+document.querySelector('#app').innerHTML=`<header class="topbar"><a class="brand" href="#inicio" aria-label="DatArg — volver al inicio"><span class="brand-logo"><img src="/datarg-logo.png" alt="DatArg"></span></a><div class="graph-picker"><button type="button" aria-expanded="false" aria-controls="graph-menu">Seleccionar gráfico <span>⌄</span></button><nav id="graph-menu" aria-label="Indicadores"><label class="graph-search"><span>Buscar gráfico</span><input type="search" placeholder="Escribí para filtrar…" autocomplete="off" spellcheck="false"></label>${sections.map(s=>`<a href="#${s.id}">${s.title}</a>`).join('')}<p class="graph-search-empty" hidden>Sin coincidencias</p></nav></div><div class="live"><i></i>Datos públicos</div></header>
 <main><section id="inicio" class="hero"><div class="hero-grid"></div><div class="hero-copy"><p class="kicker">UN MAPA ABIERTO DE LA ECONOMÍA ARGENTINA</p><h1>Los datos detrás<br>de <em>la economía.</em></h1><p class="lead">Una lectura integrada, trazable y actualizada de los principales indicadores del país.</p><div class="hero-actions"><a href="#precios">Explorar indicadores ↓</a><span><b>${sections.length}</b> áreas temáticas</span><span><b>50k+</b> observaciones</span></div></div></section>
 <section class="manifesto"><span>UNA SOLA PÁGINA</span><p>De la inflación al empleo, del dólar a la producción: desplazate para entender cómo se conectan las distintas dimensiones de la economía argentina.</p></section>
 ${sections.map(sectionHTML).join('')}</main><footer><div class="brand"><span class="brand-logo"><img src="/datarg-logo.png" alt="DatArg"></span></div><p>Datos públicos, metodología visible y fuentes trazables.</p><div class="footer-actions"><button id="notification-toggle" type="button" aria-pressed="false" hidden>Activar alertas</button><button id="install-app" type="button" hidden>Instalar DatArg ↓</button><a class="contact-link" href="mailto:maximiliano.lineiro@gmail.com">Contacto · maximiliano.lineiro@gmail.com</a><a href="/privacidad.html" target="_blank" rel="noreferrer">Privacidad</a><a href="#inicio">Volver arriba ↑</a></div></footer>`;
 
-const observer=new IntersectionObserver(entries=>entries.forEach(async entry=>{if(!entry.isIntersecting)return;const section=sections.find(s=>s.id===entry.target.id);if(!section||entry.target.dataset.loaded)return;entry.target.dataset.loaded='1';try{const rows=await loadDataset(section.file);entry.target.querySelectorAll('.chart-card').forEach((card,i)=>{card.classList.remove('loading');renderChart(card,rows,section.charts[i])});}catch{entry.target.querySelector('.charts').innerHTML='<p class="empty">No se pudo cargar este conjunto de datos.</p>';}observer.unobserve(entry.target)}),{rootMargin:'400px'});
+const observer=new IntersectionObserver(entries=>entries.forEach(async entry=>{if(!entry.isIntersecting)return;const section=sections.find(s=>s.id===entry.target.id);if(!section||entry.target.dataset.loaded)return;entry.target.dataset.loaded='1';try{const rows=await loadDataset(section.file);entry.target.querySelectorAll('.chart-card').forEach((card,i)=>{card.classList.remove('loading');if(section.renderer==='maturities')renderMaturityChart(card,rows,section.charts[i]);else renderChart(card,rows,section.charts[i])});}catch(error){console.error(error);entry.target.querySelector('.charts').innerHTML='<p class="empty">No se pudo cargar este conjunto de datos.</p>';}observer.unobserve(entry.target)}),{rootMargin:'400px'});
 document.querySelectorAll('.data-section').forEach(s=>observer.observe(s));
 const picker=document.querySelector('.graph-picker'),pickerButton=picker.querySelector('button'),navLinks=[...picker.querySelectorAll('nav a')];
-const closePicker=()=>{picker.classList.remove('open');pickerButton.setAttribute('aria-expanded','false')};
-pickerButton.onclick=()=>{const open=picker.classList.toggle('open');pickerButton.setAttribute('aria-expanded',String(open))};
+const graphSearch=picker.querySelector('.graph-search input'),graphSearchEmpty=picker.querySelector('.graph-search-empty');
+const normalizeSearch=value=>value.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLocaleLowerCase('es-AR').trim();
+const filterGraphs=()=>{const query=normalizeSearch(graphSearch.value);let matches=0;navLinks.forEach(link=>{const visible=!query||normalizeSearch(link.textContent).includes(query);link.hidden=!visible;if(visible)matches+=1});graphSearchEmpty.hidden=matches>0};
+const resetGraphSearch=()=>{graphSearch.value='';filterGraphs()};
+const closePicker=()=>{picker.classList.remove('open');pickerButton.setAttribute('aria-expanded','false');resetGraphSearch()};
+pickerButton.onclick=()=>{const open=picker.classList.toggle('open');pickerButton.setAttribute('aria-expanded',String(open));if(open)requestAnimationFrame(()=>graphSearch.focus());else resetGraphSearch()};
+graphSearch.oninput=filterGraphs;
+graphSearch.onkeydown=event=>{if(event.key==='Enter'){const first=navLinks.find(link=>!link.hidden);if(first){event.preventDefault();first.click()}}};
 navLinks.forEach(link=>link.onclick=closePicker);
 document.addEventListener('click',event=>{if(!picker.contains(event.target))closePicker()});
 document.addEventListener('keydown',event=>{if(event.key==='Escape'){closePicker();pickerButton.focus()}});

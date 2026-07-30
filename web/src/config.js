@@ -119,8 +119,30 @@ export const sections = [
     charts: [{ title: 'Riesgo país', subtitle: 'Puntos básicos', unit: 'pb', defaultRange: '5Y', series: { argentinadatos_country_risk: 'Riesgo país' }}]
   },
   {
+    id: 'intervencion', eyebrow: 'MERCADO CAMBIARIO', title: 'Intervención cambiaria', intro: 'Compras y ventas de divisas del BCRA en el mercado de cambios, con acumulados mensuales y anuales.', file: 'fx_intervention.csv',
+    warning: 'Valores positivos indican compras netas y valores negativos, ventas netas. La serie oficial excluye las operaciones directas del BCRA con el Tesoro Nacional.',
+    charts: [{ title: 'Compras y ventas de divisas del BCRA', subtitle: 'Flujo neto en millones de dólares', unit: 'USD M', type: 'bar', includeZero: true, defaultRange: '5Y', metricToggle: {
+      default: 'daily',
+      labels: { daily: 'Diario', monthly: 'Acumulado mensual', annual: 'Acumulado anual' },
+      seriesByMetric: {
+        daily: { bcra_fx_intervention_daily: 'Intervención neta diaria' },
+        monthly: { bcra_fx_intervention_monthly: 'Acumulado mensual' },
+        annual: { bcra_fx_intervention_annual: 'Acumulado anual' }
+      }
+    }, series: { bcra_fx_intervention_daily: 'Intervención neta diaria' } }]
+  },
+  {
     id: 'tasas', eyebrow: 'SISTEMA FINANCIERO', title: 'Tasas de interés', intro: 'BADLAR y TAMAR de bancos privados publicadas por el BCRA.', file: 'interest_rates.csv',
     charts: [{ title: 'Tasas mayoristas', subtitle: 'Tasa nominal anual', unit: '% TNA', defaultRange: '5Y', series: { bcra_badlar_private_tna: 'BADLAR', bcra_tamar_private_tna: 'TAMAR' }}]
+  },
+  {
+    id: 'credito', eyebrow: 'SISTEMA FINANCIERO', title: 'Crédito privado y sector público', intro: 'Préstamos de las entidades financieras al sector privado no financiero y exposición de los bancos al sector público.', file: 'credit.csv',
+    warning: 'El índice real deflacta los saldos de fin de mes con el IPC nacional y fija diciembre de 2019 = 100. La vista sobre PIB divide cada saldo por el PIB nominal anualizado de los últimos cuatro trimestres; si todavía no se publicó un trimestre nuevo, mantiene el último denominador disponible. Los préstamos en moneda extranjera están valuados en pesos al tipo de cambio de cada período, por lo que el índice real también puede reflejar cambios de valuación. La exposición pública ampliada excluye Letras y Notas del BCRA.',
+    charts: [
+      { title: 'Crédito al sector privado no financiero', subtitle: 'Evolución real y profundidad respecto de la economía', unit: 'índice', metricToggle: { default: 'real_index', labels: { real_index: 'Nivel real (dic-19=100)', gdp_ratio: 'Porcentaje del PIB' }, units: { real_index: 'índice', gdp_ratio: '%' }, seriesByMetric: { real_index: { bcra_private_nonfinancial_credit_real_index: 'Sector privado' }, gdp_ratio: { bcra_private_nonfinancial_credit_gdp_ratio: 'Sector privado' } } }, series: { bcra_private_nonfinancial_credit_real_index: 'Sector privado' } },
+      { title: 'Préstamos al sector público', subtitle: 'Gobiernos y empresas u otros entes públicos', unit: 'índice', metricToggle: { default: 'real_index', labels: { real_index: 'Nivel real (dic-19=100)', gdp_ratio: 'Porcentaje del PIB' }, units: { real_index: 'índice', gdp_ratio: '%' }, seriesByMetric: { real_index: { bcra_public_loans_total_real_index: 'Total sector público', bcra_public_loans_government_real_index: 'Gobiernos', bcra_public_loans_enterprises_real_index: 'Empresas y otros entes' }, gdp_ratio: { bcra_public_loans_total_gdp_ratio: 'Total sector público', bcra_public_loans_government_gdp_ratio: 'Gobiernos', bcra_public_loans_enterprises_gdp_ratio: 'Empresas y otros entes' } } }, series: { bcra_public_loans_total_real_index: 'Total sector público', bcra_public_loans_government_real_index: 'Gobiernos', bcra_public_loans_enterprises_real_index: 'Empresas y otros entes' } },
+      { title: 'Exposición ampliada al sector público', subtitle: 'Préstamos más títulos públicos en poder de las entidades financieras', unit: 'índice', defaultVisibleByMetric: { real_index: ['bcra_public_exposure_total_real_index'], gdp_ratio: ['bcra_public_exposure_total_gdp_ratio'] }, metricToggle: { default: 'real_index', labels: { real_index: 'Nivel real (dic-19=100)', gdp_ratio: 'Porcentaje del PIB' }, units: { real_index: 'índice', gdp_ratio: '%' }, seriesByMetric: { real_index: { bcra_public_exposure_total_real_index: 'Exposición total', bcra_public_loans_total_real_index: 'Préstamos', bcra_public_exposure_securities_real_index: 'Títulos públicos' }, gdp_ratio: { bcra_public_exposure_total_gdp_ratio: 'Exposición total', bcra_public_loans_total_gdp_ratio: 'Préstamos', bcra_public_exposure_securities_gdp_ratio: 'Títulos públicos' } } }, series: { bcra_public_exposure_total_real_index: 'Exposición total', bcra_public_loans_total_real_index: 'Préstamos', bcra_public_exposure_securities_real_index: 'Títulos públicos' } }
+    ]
   },
   {
     id: 'fiscal', eyebrow: 'FINANZAS PÚBLICAS', title: 'Recaudación y resultado fiscal', intro: 'Ingresos tributarios y resultados mensuales del Sector Público Nacional no Financiero medidos por base caja.', file: 'fiscal.csv',
@@ -146,6 +168,13 @@ export const sections = [
       { title: 'Deuda bruta del Tesoro', subtitle: 'Administración Central; nivel en USD o proporción del PIB', unit: 'USD M', metricToggle: { default: 'usd', labels: { usd: 'Millones de USD', gdp: 'Porcentaje del PIB' }, units: { usd: 'USD M', gdp: '%' }, seriesByMetric: { usd: { mecon_gross_central_government_debt: 'Tesoro' }, gdp: { mecon_gross_central_government_debt_gdp_ratio: 'Tesoro' } } }, series: { mecon_gross_central_government_debt: 'Tesoro' }},
       { title: 'Pasivos seleccionados del BCRA', subtitle: 'Instrumentos remunerados convertidos a USD', unit: 'USD M', series: { bcra_interest_bearing_liabilities: 'BCRA' }}
     ]
+  },
+  {
+    id: 'vencimientos', eyebrow: 'FINANZAS PÚBLICAS', title: 'Vencimientos del Tesoro',
+    intro: 'Cronograma mensual de capital e intereses de la deuda bruta de la Administración Central, con apertura por grupo e instrumento.',
+    file: 'treasury_maturities.csv', renderer: 'maturities',
+    warning: 'Es un cronograma proyectado, no pagos efectivamente realizados. Cada edición conserva la fecha de corte del informe y valúa los compromisos con el stock de deuda y los tipos de cambio vigentes en esa fecha.',
+    charts: [{ title: 'Perfil mensual de vencimientos', subtitle: 'Capital e intereses; millones de USD' }]
   },
   {
     id: 'deuda-neta', eyebrow: 'FINANZAS PÚBLICAS', title: 'Deuda estatal neta', intro: 'Medición comparable que excluye deuda intrasector público e incorpora los pasivos financieros del BCRA y las reservas netas.', file: 'consolidated_debt.csv',
