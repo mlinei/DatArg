@@ -198,8 +198,11 @@ footer{flex-direction:column;align-items:start;gap:25px}
 @media(max-width:600px){.chart-selectors,.chart-selectors label,.chart-selectors select{width:100%}}
 @media(max-width:600px){.chart-actions,.view-toggle{width:100%}.view-toggle button{flex:1;min-height:44px}.table-toolbar{align-items:flex-start;flex-direction:column;margin-bottom:8px}.table-toolbar button{min-height:40px}.data-table-scroll{max-height:420px}}
 .maturity-chart .maturity-bar{cursor:crosshair}
+.maturity-chart svg text{font-size:10px}
 .maturity-summary{justify-content:flex-start}
 .maturity-summary>div{min-width:190px}
+.latest-row .maturity-cutoff{display:flex;flex-direction:column;align-items:flex-start;gap:3px;white-space:nowrap}
+.latest-row .maturity-cutoff span,.latest-row .maturity-cutoff strong,.latest-row .maturity-cutoff small{display:block;grid-column:auto}
 .maturity-table-controls{display:flex;justify-content:space-between;align-items:end;gap:12px;margin:10px 0 14px}
 .maturity-table-controls label{display:grid;gap:6px;color:var(--muted);font:400 9px DM Mono;text-transform:uppercase;letter-spacing:.08em}
 .maturity-table-controls select,.maturity-table-controls button{min-height:38px;border:1px solid var(--line);background:#06101f;color:var(--text);padding:8px 10px;font:400 10px DM Mono}
