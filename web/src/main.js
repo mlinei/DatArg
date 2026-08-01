@@ -35,6 +35,14 @@ function periodDate(p) {
   if (/^\d{4}-\d{2}$/.test(p)) return new Date(`${p}-01T00:00:00Z`);
   return new Date(`${p}T00:00:00Z`);
 }
+function precisePeriodLabel(period) {
+  if (/^\d{4}$/.test(period)) return period;
+  if (/^\d{4}-Q\d$/.test(period)) return `T${period.at(-1)} ${period.slice(0,4)}`;
+  if (/^\d{4}-S\d$/.test(period)) return `S${period.at(-1)} ${period.slice(0,4)}`;
+  if (/^\d{4}-\d{2}$/.test(period)) return `${period.slice(5)}/${period.slice(0,4)}`;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(period)) return period.split('-').reverse().join('/');
+  return period;
+}
 function chartSeries(chart) {
   if (chart.composite) {
     const current = state.get(chart) || { sector: chart.composite.defaultSector, metric: chart.composite.defaultMetric };
@@ -56,8 +64,8 @@ function chartSeries(chart) {
 }
 function filterRange(points, range, from, to) {
   if (from || to) {
-    const min = from ? +new Date(`${from}-01T00:00:00Z`) : -Infinity;
-    const max = to ? +new Date(`${to}-28T23:59:59Z`) + 4*864e5 : Infinity;
+    const min = from ? Number(from) : -Infinity;
+    const max = to ? Number(to) : Infinity;
     return points.filter(p => p.date >= min && p.date <= max);
   }
   if (range === 'ALL' || !points.length) return points;
@@ -184,6 +192,7 @@ function renderChart(container, rows, chart) {
   const displayUnit = chart.metricToggle?.units?.[toggleMetric] || chart.composite?.units?.[compositeState?.metric] || ((chart.composite && compositeState.metric === 'yoy') || toggleMetric === 'mom' ? '%' : chart.unit);
   const allSelectedPoints = rows.filter(r => selectedSeries[r.series_id]).map(r => ({...r, rawValue:r.value, date:+periodDate(r.period), value:+r.value})).filter(r=>Number.isFinite(r.value)).sort((a,b)=>a.date-b.date);
   const coverageDates = [...new Set(allSelectedPoints.map(p=>p.date))];
+  const periodByDate = new Map(allSelectedPoints.map(point=>[point.date,point.period]));
   const points = filterRange(allSelectedPoints, range, container.dataset.from, container.dataset.to);
   const viewMode = container.dataset.view || 'chart';
   const tableLimit = Math.max(100, +(container.dataset.tableLimit || 100));
@@ -200,13 +209,12 @@ function renderChart(container, rows, chart) {
   const titleControls = chart.composite ? `<div class="chart-selectors"><label>Vista<select class="metric-select">${Object.entries(chart.composite.metrics).map(([k,v])=>`<option value="${k}" ${compositeState.metric===k?'selected':''}>${v}</option>`).join('')}</select></label><label>${chart.composite.dimensionLabel || 'Rama'}<select class="sector-select">${Object.entries(chart.composite.sectors).map(([k,v])=>`<option value="${k}" ${compositeState.sector===k?'selected':''}>${v}</option>`).join('')}</select></label></div>` : chart.metricToggle ? `<div class="chart-selectors"><label>Vista<select class="toggle-metric-select">${Object.entries(chart.metricToggle.labels).map(([k,v])=>`<option value="${k}" ${toggleMetric===k?'selected':''}>${v}</option>`).join('')}</select></label></div>` : chart.selector ? `<select class="chart-select">${Object.entries(chart.selector).map(([k,v])=>`<option value="${k}" ${(state.get(chart)||chart.selected)===k?'selected':''}>${v}</option>`).join('')}</select>` : chart.regionSelector ? `<select class="chart-select">${Object.entries(chart.regionSelector).map(([k,v])=>`<option value="${k}" ${(state.get(chart)||chart.region)===k?'selected':''}>${v}</option>`).join('')}</select>`:'';
   const viewControls = `<div class="view-toggle" role="group" aria-label="Formato de visualización"><button type="button" data-view="chart" class="${viewMode==='chart'?'active':''}" aria-pressed="${viewMode==='chart'}">Gráfico</button><button type="button" data-view="table" class="${viewMode==='table'?'active':''}" aria-pressed="${viewMode==='table'}">Tabla</button></div>`;
   const sources = [...new Map(allSelectedPoints.map(row => [sourceName(row), row])).values()].filter(row=>row.source_url);
-  const annualCoverage = allSelectedPoints.length > 0 && allSelectedPoints.every(point => point.frequency === 'annual');
   const firstCoverage = coverageDates[0], lastCoverage = coverageDates.at(-1);
-  const activeFrom = container.dataset.from ? +new Date(`${container.dataset.from}-01T00:00:00Z`) : (points[0]?.date ?? firstCoverage);
-  const activeTo = container.dataset.to ? +new Date(`${container.dataset.to}-28T23:59:59Z`) : (points.at(-1)?.date ?? lastCoverage);
+  const activeFrom = container.dataset.from ? Number(container.dataset.from) : (points[0]?.date ?? firstCoverage);
+  const activeTo = container.dataset.to ? Number(container.dataset.to) : (points.at(-1)?.date ?? lastCoverage);
   const fromIndex = Math.max(0, coverageDates.findIndex(d=>d>=activeFrom));
   const toCandidate = coverageDates.findLastIndex(d=>d<=activeTo); const toIndex = toCandidate<0?coverageDates.length-1:toCandidate;
-  const periodLabel = d => { const value=new Date(d); return annualCoverage || value.getUTCFullYear()!==new Date(lastCoverage).getUTCFullYear() ? `${value.getUTCFullYear()}` : `${value.getUTCMonth()+1}/${value.getUTCFullYear()}`; };
+  const periodLabel = date => precisePeriodLabel(periodByDate.get(date) || new Date(date).toISOString().slice(0,10));
   const visualContent = viewMode === 'table' ? tableHTML(tableModel, displayUnit, tableLimit) : `<div class="chart-wrap"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${chart.title}">
       ${ticks.map(v=>`<line x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}"/><text x="${L-10}" y="${y(v)+4}" text-anchor="end">${human(v,displayUnit).replace('USD ','')}</text>`).join('')}
       ${visuals}<rect class="hover-zone" x="${L}" y="${T}" width="${W-L-R}" height="${H-T-B}"/><line class="crosshair" y1="${T}" y2="${H-B}"/><circle class="hover-dot" r="4"/>
@@ -216,7 +224,7 @@ function renderChart(container, rows, chart) {
     <div class="latest-row">${latest.map(s=>`<div><i style="background:${s.color}"></i><span>${s.label}</span><strong>${human(s.row.value,displayUnit)}</strong><small>${s.row.period}</small></div>`).join('')}</div>
     ${visualContent}
     <div class="chart-foot"><div class="legend series-toggle">${Object.entries(availableSeries).map(([id,label],i)=>`<button class="${visible.has(id)?'visible':'muted'}" data-series="${id}"><i style="background:${COLORS[i]}"></i><span>${label}</span><b>${visible.has(id)?'✓':'+'}</b></button>`).join('')}</div><div class="ranges">${['1Y','5Y','10Y','ALL'].map(r=>`<button class="${!container.dataset.from&&!container.dataset.to&&range===r?'active':''}" data-range="${r}">${r==='ALL'?'Todo':r}</button>`).join('')}</div></div>
-    <div class="range-segment"><div class="range-copy"><span>PERÍODO VISIBLE</span><strong class="range-from-label">${periodLabel(coverageDates[fromIndex])}</strong><i>—</i><strong class="range-to-label">${periodLabel(coverageDates[toIndex])}</strong></div><div class="dual-range"><div class="range-track"></div><div class="range-fill"></div><input class="range-from" type="range" min="0" max="${coverageDates.length-1}" value="${fromIndex}"><input class="range-to" type="range" min="0" max="${coverageDates.length-1}" value="${toIndex}"></div><div class="coverage-labels"><span>${periodLabel(firstCoverage)}</span><span>${periodLabel(lastCoverage)}</span></div></div>
+    <div class="range-segment"><div class="range-copy"><span>PERÍODO VISIBLE</span></div><div class="range-steppers"><div class="range-stepper"><span>Inicio</span><div><button type="button" data-range-step="from-prev" aria-label="Mover el inicio un período hacia atrás">‹</button><strong class="range-from-label">${periodLabel(coverageDates[fromIndex])}</strong><button type="button" data-range-step="from-next" aria-label="Mover el inicio un período hacia adelante">›</button></div></div><i>—</i><div class="range-stepper"><span>Final</span><div><button type="button" data-range-step="to-prev" aria-label="Mover el final un período hacia atrás">‹</button><strong class="range-to-label">${periodLabel(coverageDates[toIndex])}</strong><button type="button" data-range-step="to-next" aria-label="Mover el final un período hacia adelante">›</button></div></div></div><div class="dual-range"><div class="range-track"></div><div class="range-fill"></div><input class="range-from" type="range" min="0" max="${coverageDates.length-1}" value="${fromIndex}" aria-label="Inicio del período visible"><input class="range-to" type="range" min="0" max="${coverageDates.length-1}" value="${toIndex}" aria-label="Final del período visible"></div><div class="coverage-labels"><span>${periodLabel(firstCoverage)}</span><span>${periodLabel(lastCoverage)}</span></div></div>
     <div class="source-citation"><span>Fuente${sources.length>1?'s':''}:</span>${sources.map(row=>`<a href="${row.source_url}" target="_blank" rel="noreferrer">${sourceName(row)} ↗</a>`).join('')}</div>`;
   container.querySelectorAll('[data-view]').forEach(button=>button.onclick=()=>{container.dataset.view=button.dataset.view;delete container.dataset.tableLimit;renderChart(container,rows,chart)});
   const moreButton=container.querySelector('.table-more'); if(moreButton) moreButton.onclick=()=>{container.dataset.tableLimit=tableLimit+100;renderChart(container,rows,chart)};
@@ -224,10 +232,12 @@ function renderChart(container, rows, chart) {
   container.querySelectorAll('[data-range]').forEach(b=>b.onclick=()=>{container.dataset.range=b.dataset.range;delete container.dataset.from;delete container.dataset.to;renderChart(container,rows,chart)});
   container.querySelectorAll('[data-series]').forEach(b=>b.onclick=()=>{const id=b.dataset.series;if(visible.has(id)){if(visible.size>1)visible.delete(id)}else visible.add(id);renderChart(container,rows,chart)});
   const fromSlider=container.querySelector('.range-from'),toSlider=container.querySelector('.range-to'),fill=container.querySelector('.range-fill');
-  const paintRange=()=>{let a=+fromSlider.value,b=+toSlider.value;if(a>b-1){if(document.activeElement===fromSlider)a=Math.max(0,b-1);else b=Math.min(coverageDates.length-1,a+1)}fromSlider.value=a;toSlider.value=b;fill.style.left=`${a/(coverageDates.length-1)*100}%`;fill.style.right=`${100-b/(coverageDates.length-1)*100}%`;container.querySelector('.range-from-label').textContent=periodLabel(coverageDates[a]);container.querySelector('.range-to-label').textContent=periodLabel(coverageDates[b]);};
+  const lastIndex=coverageDates.length-1;
+  const paintRange=()=>{let a=+fromSlider.value,b=+toSlider.value;if(lastIndex>0&&a>b-1){if(document.activeElement===fromSlider)a=Math.max(0,b-1);else b=Math.min(lastIndex,a+1)}fromSlider.value=a;toSlider.value=b;const divisor=Math.max(1,lastIndex);fill.style.left=`${a/divisor*100}%`;fill.style.right=`${100-b/divisor*100}%`;container.querySelector('.range-from-label').textContent=periodLabel(coverageDates[a]);container.querySelector('.range-to-label').textContent=periodLabel(coverageDates[b]);container.querySelector('[data-range-step="from-prev"]').disabled=a<=0;container.querySelector('[data-range-step="from-next"]').disabled=a>=b-(lastIndex>0?1:0);container.querySelector('[data-range-step="to-prev"]').disabled=b<=a+(lastIndex>0?1:0);container.querySelector('[data-range-step="to-next"]').disabled=b>=lastIndex;};
   paintRange(); fromSlider.oninput=toSlider.oninput=paintRange;
-  const applySlider=()=>{const a=coverageDates[+fromSlider.value],b=coverageDates[+toSlider.value];container.dataset.from=new Date(a).toISOString().slice(0,7);container.dataset.to=new Date(b).toISOString().slice(0,7);renderChart(container,rows,chart)};
+  const applySlider=()=>{const a=coverageDates[+fromSlider.value],b=coverageDates[+toSlider.value];container.dataset.from=String(a);container.dataset.to=String(b);renderChart(container,rows,chart)};
   fromSlider.onchange=toSlider.onchange=applySlider;
+  container.querySelectorAll('[data-range-step]').forEach(button=>button.onclick=()=>{let a=+fromSlider.value,b=+toSlider.value;if(button.dataset.rangeStep==='from-prev')a=Math.max(0,a-1);if(button.dataset.rangeStep==='from-next')a=Math.min(b-1,a+1);if(button.dataset.rangeStep==='to-prev')b=Math.max(a+1,b-1);if(button.dataset.rangeStep==='to-next')b=Math.min(lastIndex,b+1);fromSlider.value=a;toSlider.value=b;paintRange();applySlider()});
   const select=container.querySelector('.chart-select'); if(select) select.onchange=()=>{state.set(chart,select.value);visibility.delete(chart);renderChart(container,rows,chart)};
   const metricSelect=container.querySelector('.metric-select'),sectorSelect=container.querySelector('.sector-select');
   if(metricSelect&&sectorSelect){const updateComposite=()=>{state.set(chart,{metric:metricSelect.value,sector:sectorSelect.value});visibility.delete(chart);delete container.dataset.from;delete container.dataset.to;renderChart(container,rows,chart)};metricSelect.onchange=sectorSelect.onchange=updateComposite;}
