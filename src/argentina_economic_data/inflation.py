@@ -84,7 +84,10 @@ def _download(source_id: str, url: str, target: Path) -> None:
             time.sleep(DOWNLOAD_BACKOFF_SECONDS[attempt - 1])
 
 
-def acquire(source_id: str, url: str, raw_root: Path, local: Path | None = None) -> Artifact:
+def acquire(
+    source_id: str, url: str, raw_root: Path, local: Path | None = None,
+    *, min_bytes: int = 100,
+) -> Artifact:
     retrieved = datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
     stamp = retrieved.replace(":", "").replace("-", "")
     suffix = Path(urlparse(url).path).suffix
@@ -100,7 +103,7 @@ def acquire(source_id: str, url: str, raw_root: Path, local: Path | None = None)
         shutil.rmtree(target_dir, ignore_errors=True)
         raise
     size = target.stat().st_size
-    if size < 100:
+    if size < min_bytes:
         raise PipelineError(f"{source_id}: archivo demasiado pequeño ({size} bytes)")
     artifact = Artifact(source_id, url, target, _sha256(target), size, retrieved)
     (target_dir / "manifest.json").write_text(

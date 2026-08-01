@@ -21,7 +21,8 @@
     "reserves.csv",
     "trade.csv",
     "treasury_maturities.csv",
-    "wages.csv"
+    "wages.csv",
+    "yield_curves.csv"
   ],
-  "generatedAt": "2026-08-01T01:08:06.213Z"
+  "generatedAt": "2026-08-01T17:25:36.640Z"
 }

@@ -4,8 +4,8 @@ import { readFile, readdir } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { asc, eq } from 'drizzle-orm';
 import { createDatabase } from '../../db/client.js';
-import { datasets, observations, series, treasuryMaturities } from '../../db/schema.js';
-import { CSV_COLUMNS, MATURITY_CSV_COLUMNS, parseCsv, parseMaturityCsv } from './csv.js';
+import { datasets, observations, series, treasuryMaturities, yieldCurveInstruments } from '../../db/schema.js';
+import { CSV_COLUMNS, MATURITY_CSV_COLUMNS, YIELD_CURVE_CSV_COLUMNS, parseCsv, parseMaturityCsv, parseYieldCurveCsv } from './csv.js';
 
 const sourceDirectory = resolve(process.argv[2] || 'data/processed');
 const files = (await readdir(sourceDirectory)).filter(file => file.endsWith('.csv')).sort();
@@ -15,6 +15,33 @@ let verifiedRows = 0;
 try {
   for (const fileName of files) {
     const sourceText = await readFile(resolve(sourceDirectory, fileName), 'utf8');
+    if (fileName === 'yield_curves.csv') {
+      const sourceRows = parseYieldCurveCsv(sourceText);
+      const [dataset] = await db.select().from(datasets).where(eq(datasets.fileName, fileName));
+      if (!dataset || dataset.importStatus !== 'ready') throw new Error(`${fileName}: dataset ausente o incompleto`);
+      const checksum = createHash('sha256').update(sourceText).digest('hex');
+      if (dataset.rowCount !== sourceRows.length || dataset.contentSha256 !== checksum) throw new Error(`${fileName}: metadatos no coinciden`);
+      const stored = await db.select({
+        snapshot_date: yieldCurveInstruments.snapshotDate, ticker: yieldCurveInstruments.ticker,
+        instrument_name: yieldCurveInstruments.instrumentName, curve_type: yieldCurveInstruments.curveType,
+        instrument_type: yieldCurveInstruments.instrumentType, settlement_date: yieldCurveInstruments.settlementDate,
+        maturity_date: yieldCurveInstruments.maturityDate, days_to_maturity: yieldCurveInstruments.daysToMaturity,
+        price: yieldCurveInstruments.price, annual_yield: yieldCurveInstruments.annualYield,
+        monthly_yield: yieldCurveInstruments.monthlyYield, duration_years: yieldCurveInstruments.durationYears,
+        volume: yieldCurveInstruments.volume, status: yieldCurveInstruments.status, source_id: yieldCurveInstruments.sourceId,
+        source_url: yieldCurveInstruments.sourceUrl, source_sha256: yieldCurveInstruments.sourceSha256,
+        retrieved_at: yieldCurveInstruments.retrievedAt,
+      }).from(yieldCurveInstruments).where(eq(yieldCurveInstruments.datasetId, dataset.id))
+        .orderBy(asc(yieldCurveInstruments.snapshotDate), asc(yieldCurveInstruments.curveType), asc(yieldCurveInstruments.daysToMaturity), asc(yieldCurveInstruments.ticker));
+      if (stored.length !== sourceRows.length) throw new Error(`${fileName}: cantidad de filas no coincide`);
+      for (let index = 0; index < sourceRows.length; index += 1) for (const column of YIELD_CURVE_CSV_COLUMNS) {
+        const numeric = ['days_to_maturity','price','annual_yield','monthly_yield','duration_years','volume'].includes(column);
+        if (numeric ? Number(sourceRows[index][column]) !== Number(stored[index][column]) : sourceRows[index][column] !== String(stored[index][column])) throw new Error(`${fileName}: diferencia en fila ${index + 2}, columna ${column}`);
+      }
+      verifiedRows += stored.length;
+      console.log(`${fileName}: verificado`);
+      continue;
+    }
     if (fileName === 'treasury_maturities.csv') {
       const sourceRows = parseMaturityCsv(sourceText);
       const [dataset] = await db.select().from(datasets).where(eq(datasets.fileName, fileName));

@@ -1,7 +1,7 @@
 import { asc, eq } from 'drizzle-orm';
 import { createDatabase } from '../../db/client.js';
-import { datasets, observations, series, treasuryMaturities } from '../../db/schema.js';
-import { maturityRowsToCsv, rowsToCsv, type CsvRow, type MaturityCsvRow } from '../../scripts/db/csv.js';
+import { datasets, observations, series, treasuryMaturities, yieldCurveInstruments } from '../../db/schema.js';
+import { maturityRowsToCsv, rowsToCsv, yieldCurveRowsToCsv, type CsvRow, type MaturityCsvRow, type YieldCurveCsvRow } from '../../scripts/db/csv.js';
 
 const FILE_PATTERN = /^[a-z0-9_-]+\.csv$/;
 const CORS_HEADERS = {
@@ -68,6 +68,23 @@ export async function GET(request: Request) {
           'Cache-Control': 'public, max-age=300, s-maxage=300, stale-while-revalidate=86400',
           ETag: `"${dataset.contentSha256}"`,
         },
+      });
+    }
+    if (fileName === 'yield_curves.csv') {
+      const stored = await database.db.select({
+        snapshot_date: yieldCurveInstruments.snapshotDate, ticker: yieldCurveInstruments.ticker,
+        instrument_name: yieldCurveInstruments.instrumentName, curve_type: yieldCurveInstruments.curveType,
+        instrument_type: yieldCurveInstruments.instrumentType, settlement_date: yieldCurveInstruments.settlementDate,
+        maturity_date: yieldCurveInstruments.maturityDate, days_to_maturity: yieldCurveInstruments.daysToMaturity,
+        price: yieldCurveInstruments.price, annual_yield: yieldCurveInstruments.annualYield,
+        monthly_yield: yieldCurveInstruments.monthlyYield, duration_years: yieldCurveInstruments.durationYears,
+        volume: yieldCurveInstruments.volume, status: yieldCurveInstruments.status, source_id: yieldCurveInstruments.sourceId,
+        source_url: yieldCurveInstruments.sourceUrl, source_sha256: yieldCurveInstruments.sourceSha256,
+        retrieved_at: yieldCurveInstruments.retrievedAt,
+      }).from(yieldCurveInstruments).where(eq(yieldCurveInstruments.datasetId, dataset.id))
+        .orderBy(asc(yieldCurveInstruments.snapshotDate), asc(yieldCurveInstruments.curveType), asc(yieldCurveInstruments.daysToMaturity), asc(yieldCurveInstruments.ticker));
+      return new Response(yieldCurveRowsToCsv(stored.map(row => Object.fromEntries(Object.entries(row).map(([key,value]) => [key,String(value)]))) as YieldCurveCsvRow[]), {
+        headers: { ...CORS_HEADERS, 'Content-Type': 'text/csv; charset=utf-8', 'Cache-Control': 'public, max-age=300, s-maxage=300, stale-while-revalidate=86400', ETag: `"${dataset.contentSha256}"` },
       });
     }
 

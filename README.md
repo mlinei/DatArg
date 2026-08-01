@@ -130,6 +130,14 @@ aed interest-rates
 
 Importa BADLAR y TAMAR de bancos privados, tanto TNA como TEA, desde la API v4 oficial del BCRA. La salida queda en `data/processed/interest_rates.csv`.
 
+### Curvas nominal, CER e inflación breakeven
+
+```bash
+aed yield-curves
+```
+
+Calcula la TIR efectiva anual, la tasa efectiva mensual y la duración de LECAP/BONCAP combinando las condiciones de emisión recopiladas por ArgentinaDatos con cotizaciones demoradas de Data912. Para títulos CER reconstruye la TIR con precios y cronogramas públicos de Rendimientos.co y el CER oficial fechado por el BCRA; ArgentinaDatos queda como respaldo si vuelve a publicar observaciones válidas. La web deriva la inflación breakeven mediante Fisher sólo cuando ambas curvas comparten fecha y dentro del rango CER observado. La salida canónica es `data/processed/yield_curves.csv`. `--source-file` permite mantener el importador normalizado como alternativa auditable.
+
 ## Crédito privado y exposición al sector público
 
 ```bash

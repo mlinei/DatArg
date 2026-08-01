@@ -4,8 +4,8 @@ import { readFile, readdir } from 'node:fs/promises';
 import { basename, resolve } from 'node:path';
 import { eq, sql } from 'drizzle-orm';
 import { createDatabase } from '../../db/client.js';
-import { datasets, observations, series, treasuryMaturities } from '../../db/schema.js';
-import { parseCsv, parseMaturityCsv } from './csv.js';
+import { datasets, observations, series, treasuryMaturities, yieldCurveInstruments } from '../../db/schema.js';
+import { parseCsv, parseMaturityCsv, parseYieldCurveCsv } from './csv.js';
 
 const sourceDirectory = resolve(process.argv[2] || 'data/processed');
 const requestedFiles = process.argv.slice(3);
@@ -25,6 +25,32 @@ try {
   for (const fileName of files) {
     const datasetId = fileName.replace(/\.csv$/, '');
     const file = await readFile(resolve(sourceDirectory, fileName), 'utf8');
+    if (fileName === 'yield_curves.csv') {
+      const rows = parseYieldCurveCsv(file);
+      if (!rows.length) throw new Error(`${fileName} no contiene instrumentos`);
+      const checksum = createHash('sha256').update(file).digest('hex');
+      const datasetStatement = db.insert(datasets).values({ id: datasetId, fileName, contentSha256: checksum, rowCount: rows.length, importStatus: 'importing', updatedAt: importedAt })
+        .onConflictDoUpdate({ target: datasets.id, set: { fileName, importStatus: 'importing', updatedAt: importedAt } });
+      await db.batch([datasetStatement, db.delete(yieldCurveInstruments).where(eq(yieldCurveInstruments.datasetId, datasetId))]);
+      for (let offset = 0; offset < rows.length; offset += 250) {
+        const chunk = rows.slice(offset, offset + 250).map(row => ({
+          datasetId, snapshotDate: row.snapshot_date, ticker: row.ticker, instrumentName: row.instrument_name,
+          curveType: row.curve_type as 'nominal' | 'cer', instrumentType: row.instrument_type,
+          settlementDate: row.settlement_date, maturityDate: row.maturity_date, daysToMaturity: Number(row.days_to_maturity),
+          price: Number(row.price), annualYield: Number(row.annual_yield), monthlyYield: Number(row.monthly_yield),
+          durationYears: Number(row.duration_years), volume: Number(row.volume), status: row.status,
+          sourceId: row.source_id, sourceUrl: row.source_url, sourceSha256: row.source_sha256,
+          retrievedAt: row.retrieved_at, ingestedAt: importedAt,
+        }));
+        if (chunk.some(row => !Number.isInteger(row.daysToMaturity) || [row.price,row.annualYield,row.monthlyYield,row.durationYears,row.volume].some(value => !Number.isFinite(value)))) throw new Error(`${fileName} contiene valores no numéricos`);
+        await db.insert(yieldCurveInstruments).values(chunk);
+      }
+      const [{ count }] = await db.select({ count: sql<number>`count(*)` }).from(yieldCurveInstruments).where(eq(yieldCurveInstruments.datasetId, datasetId));
+      if (Number(count) !== rows.length) throw new Error(`${fileName}: Turso tiene ${count} filas y el CSV ${rows.length}`);
+      await db.update(datasets).set({ contentSha256: checksum, rowCount: rows.length, importStatus: 'ready', updatedAt: importedAt }).where(eq(datasets.id, datasetId));
+      console.log(`${fileName}: ${rows.length} instrumentos`);
+      continue;
+    }
     if (fileName === 'treasury_maturities.csv') {
       const rows = parseMaturityCsv(file);
       if (!rows.length) throw new Error(`${fileName} no contiene vencimientos`);
