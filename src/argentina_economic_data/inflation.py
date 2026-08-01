@@ -63,7 +63,7 @@ def _is_transient_download_error(exc: Exception) -> bool:
     return isinstance(exc, (urllib.error.URLError, TimeoutError, ConnectionError))
 
 
-def _download(source_id: str, url: str, target: Path) -> None:
+def _download(source_id: str, url: str, target: Path, min_bytes: int) -> None:
     request = urllib.request.Request(url, headers={"User-Agent": "argentina-economic-data/0.2"})
     for attempt in range(1, DOWNLOAD_ATTEMPTS + 1):
         try:
@@ -71,7 +71,17 @@ def _download(source_id: str, url: str, target: Path) -> None:
                 content_type = response.headers.get_content_type()
                 if content_type == "text/html":
                     raise PipelineError(f"{source_id}: la fuente devolvió HTML en lugar del recurso")
+                expected_size = response.headers.get("Content-Length")
                 shutil.copyfileobj(response, output)
+            received_size = target.stat().st_size
+            if expected_size and expected_size.isdigit() and received_size != int(expected_size):
+                raise ConnectionError(
+                    f"descarga truncada: se recibieron {received_size} de {expected_size} bytes"
+                )
+            if received_size < min_bytes:
+                raise ConnectionError(
+                    f"archivo demasiado pequeño: se recibieron {received_size} bytes"
+                )
             return
         except Exception as exc:
             target.unlink(missing_ok=True)
@@ -98,7 +108,7 @@ def acquire(
         if local:
             shutil.copyfile(local, target)
         else:
-            _download(source_id, url, target)
+            _download(source_id, url, target, min_bytes)
     except Exception:
         shutil.rmtree(target_dir, ignore_errors=True)
         raise
