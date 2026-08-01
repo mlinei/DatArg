@@ -132,8 +132,11 @@ export const sections = [
     }, series: { bcra_fx_intervention_daily: 'Intervención neta diaria' } }]
   },
   {
-    id: 'tasas', eyebrow: 'SISTEMA FINANCIERO', title: 'Tasas de interés', intro: 'BADLAR y TAMAR de bancos privados publicadas por el BCRA.', file: 'interest_rates.csv',
-    charts: [{ title: 'Tasas mayoristas', subtitle: 'Tasa nominal anual', unit: '% TNA', defaultRange: '5Y', series: { bcra_badlar_private_tna: 'BADLAR', bcra_tamar_private_tna: 'TAMAR' }}]
+    id: 'tasas', eyebrow: 'SISTEMA FINANCIERO', title: 'Tasas de interés', intro: 'Tasas bancarias del BCRA y estructura temporal de rendimientos de la deuda en pesos.', file: 'interest_rates.csv',
+    charts: [
+      { title: 'Tasas mayoristas', subtitle: 'Tasa nominal anual', unit: '% TNA', defaultRange: '5Y', series: { bcra_badlar_private_tna: 'BADLAR', bcra_tamar_private_tna: 'TAMAR' }},
+      { title: 'Curvas de deuda en pesos', subtitle: 'TIR efectiva anual por plazo al vencimiento', file: 'yield_curves.csv', renderer: 'yield-curves' }
+    ]
   },
   {
     id: 'credito', eyebrow: 'SISTEMA FINANCIERO', title: 'Crédito privado y sector público', intro: 'Préstamos de las entidades financieras al sector privado no financiero y exposición de los bancos al sector público.', file: 'credit.csv',

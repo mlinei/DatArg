@@ -75,3 +75,30 @@ export const treasuryMaturities = sqliteTable('treasury_maturities', {
   index('treasury_maturities_dataset_id_idx').on(table.datasetId),
   index('treasury_maturities_snapshot_period_idx').on(table.snapshotDate, table.period),
 ]);
+
+export const yieldCurveInstruments = sqliteTable('yield_curve_instruments', {
+  datasetId: text('dataset_id').notNull().references(() => datasets.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
+  snapshotDate: text('snapshot_date').notNull(),
+  ticker: text('ticker').notNull(),
+  instrumentName: text('instrument_name').notNull(),
+  curveType: text('curve_type', { enum: ['nominal', 'cer'] }).notNull(),
+  instrumentType: text('instrument_type').notNull(),
+  settlementDate: text('settlement_date').notNull(),
+  maturityDate: text('maturity_date').notNull(),
+  daysToMaturity: integer('days_to_maturity').notNull(),
+  price: real('price').notNull(),
+  annualYield: real('annual_yield').notNull(),
+  monthlyYield: real('monthly_yield').notNull(),
+  durationYears: real('duration_years').notNull(),
+  volume: real('volume').notNull(),
+  status: text('status').notNull(),
+  sourceId: text('source_id').notNull(),
+  sourceUrl: text('source_url').notNull(),
+  sourceSha256: text('source_sha256').notNull(),
+  retrievedAt: text('retrieved_at').notNull(),
+  ingestedAt: text('ingested_at').notNull(),
+}, table => [
+  primaryKey({ name: 'yield_curve_snapshot_ticker_pk', columns: [table.snapshotDate, table.ticker] }),
+  index('yield_curve_dataset_id_idx').on(table.datasetId),
+  index('yield_curve_snapshot_type_maturity_idx').on(table.snapshotDate, table.curveType, table.maturityDate),
+]);

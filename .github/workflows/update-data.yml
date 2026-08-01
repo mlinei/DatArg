@@ -75,6 +75,7 @@ jobs:
           aed country-risk
           aed fx-intervention
           aed interest-rates
+          aed yield-curves
 
       - name: Actualizar inflación
         if: steps.frequency.outputs.scope == 'monthly' || steps.frequency.outputs.scope == 'all'
@@ -103,7 +104,7 @@ jobs:
           fi
 
       - name: Actualizar la base de datos Turso
-        if: steps.changes.outputs.changed == 'true'
+        if: steps.changes.outputs.changed == 'true' || github.event_name == 'workflow_dispatch'
         env:
           TURSO_DATABASE_URL: ${{ secrets.TURSO_DATABASE_URL }}
           TURSO_AUTH_TOKEN: ${{ secrets.TURSO_AUTH_TOKEN }}

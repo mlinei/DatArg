@@ -34,6 +34,14 @@ export const MATURITY_CSV_COLUMNS = [
 
 export type MaturityCsvRow = Record<(typeof MATURITY_CSV_COLUMNS)[number], string>;
 
+export const YIELD_CURVE_CSV_COLUMNS = [
+  'snapshot_date', 'ticker', 'instrument_name', 'curve_type', 'instrument_type',
+  'settlement_date', 'maturity_date', 'days_to_maturity', 'price', 'annual_yield',
+  'monthly_yield', 'duration_years', 'volume', 'status', 'source_id', 'source_url',
+  'source_sha256', 'retrieved_at',
+] as const;
+export type YieldCurveCsvRow = Record<(typeof YIELD_CURVE_CSV_COLUMNS)[number], string>;
+
 function parseLine(line: string) {
   const cells: string[] = [];
   let cell = '';
@@ -90,6 +98,19 @@ export function parseMaturityCsv(text: string): MaturityCsvRow[] {
   });
 }
 
+export function parseYieldCurveCsv(text: string): YieldCurveCsvRow[] {
+  const lines = text.replace(/^\uFEFF/, '').trim().split(/\r?\n/);
+  const headers = parseLine(lines.shift() || '');
+  if (headers.join(',') !== YIELD_CURVE_CSV_COLUMNS.join(',')) {
+    throw new Error(`Cabecera de curvas inesperada: ${headers.join(',')}`);
+  }
+  return lines.filter(Boolean).map((line, rowIndex) => {
+    const cells = parseLine(line);
+    if (cells.length !== YIELD_CURVE_CSV_COLUMNS.length) throw new Error(`Fila ${rowIndex + 2}: curva incompleta`);
+    return Object.fromEntries(YIELD_CURVE_CSV_COLUMNS.map((column, index) => [column, cells[index]])) as YieldCurveCsvRow;
+  });
+}
+
 function escapeCell(value: unknown) {
   const text = String(value ?? '');
   return /[",\r\n]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
@@ -103,4 +124,9 @@ export function rowsToCsv(rows: CsvRow[]) {
 export function maturityRowsToCsv(rows: MaturityCsvRow[]) {
   const body = rows.map(row => MATURITY_CSV_COLUMNS.map(column => escapeCell(row[column])).join(','));
   return `${MATURITY_CSV_COLUMNS.join(',')}\n${body.join('\n')}\n`;
+}
+
+export function yieldCurveRowsToCsv(rows: YieldCurveCsvRow[]) {
+  const body = rows.map(row => YIELD_CURVE_CSV_COLUMNS.map(column => escapeCell(row[column])).join(','));
+  return `${YIELD_CURVE_CSV_COLUMNS.join(',')}\n${body.join('\n')}\n`;
 }
