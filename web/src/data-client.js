@@ -70,7 +70,9 @@ async function download(file, base) {
   const response = await fetch(endpoint(file, base), { cache: 'no-store' });
   if (!response.ok) throw new Error(`${file}: HTTP ${response.status}`);
   const text = await response.text();
-  if (!text.startsWith('series_id,') || text.trim().split(/\r?\n/).length < 2) {
+  const supportedHeader = text.startsWith('series_id,')
+    || text.startsWith('snapshot_date,ticker,instrument_name,curve_type,');
+  if (!supportedHeader || text.trim().split(/\r?\n/).length < 2) {
     throw new Error(`${file}: contenido inválido`);
   }
   return text;
