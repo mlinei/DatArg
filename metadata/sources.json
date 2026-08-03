@@ -140,6 +140,23 @@
       "methodology_notes": "Compras netas positivas y ventas netas negativas. La variable oficial excluye operaciones directas del BCRA con el Tesoro Nacional."
     },
     {
+      "source_id": "bcra_fx_market_profit_dividends",
+      "organization": "BCRA",
+      "module": "profit_dividends",
+      "series": ["bcra_profit_dividend_outflows_monthly", "bcra_profit_dividend_outflows_annual"],
+      "landing_url": "https://www.bcra.gob.ar/estadisticas-estandarizadas-sobre-la-evolucion-del-mercado-de-cambios/",
+      "resource_url": "https://www.bcra.gob.ar/archivos/Pdfs/PublicacionesEstadisticas/informes/anexo-estadistico-mercado-cambios-balance-cambiario.xlsx",
+      "format": "xlsx",
+      "frequency": ["monthly", "annual_calculated_complete_years"],
+      "available_from": "2003-01",
+      "latest_at_research": "2026-06",
+      "unit": "million_usd",
+      "automation_type": "automatic",
+      "revision_history": "El BCRA actualiza el anexo en el mismo recurso y puede revisar meses anteriores; los años completos se recalculan en cada ejecución.",
+      "break_risks": ["workbook schema change", "series code change", "historical revision"],
+      "methodology_notes": "Usa la serie estable mlc057, Utilidades y Dividendos, de la hoja Mercado de Cambios. Invierte el signo de los egresos para mostrar giros positivos y excluye los totales anuales incrustados en la fuente."
+    },
+    {
       "source_id": "bcra_financial_system_credit",
       "organization": "BCRA",
       "module": "credit",

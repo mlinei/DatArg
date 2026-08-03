@@ -28,6 +28,7 @@ from .credit import run as run_credit
 from .debt_maturities import run as run_debt_maturities
 from .yield_curves import run as run_yield_curves
 from .usd_inflation import run as run_usd_inflation
+from .profit_dividends import run as run_profit_dividends
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -73,6 +74,9 @@ def main(argv: list[str] | None = None) -> int:
     intervention = sub.add_parser("fx-intervention", help="ejecuta intervención cambiaria diaria del BCRA")
     intervention.add_argument("--root", type=Path, default=Path.cwd())
     intervention.add_argument("--source-file", type=Path)
+    dividends = sub.add_parser("profit-dividends", help="ejecuta giros de utilidades y dividendos al exterior")
+    dividends.add_argument("--root", type=Path, default=Path.cwd())
+    dividends.add_argument("--source-file", type=Path, help="anexo estadístico local del mercado de cambios")
     credit = sub.add_parser("credit", help="ejecuta crédito privado y exposición al sector público")
     credit.add_argument("--root", type=Path, default=Path.cwd())
     credit.add_argument("--private-file", type=Path)
@@ -145,6 +149,8 @@ def main(argv: list[str] | None = None) -> int:
             result = run_interest_rates(args.root.resolve(), files)
         elif args.command == "fx-intervention":
             result = run_fx_intervention(args.root.resolve(), args.source_file)
+        elif args.command == "profit-dividends":
+            result = run_profit_dividends(args.root.resolve(), args.source_file)
         elif args.command == "credit":
             result = run_credit(args.root.resolve(), args.private_file, args.public_file, args.securities_file)
         elif args.command == "consolidated-debt":
