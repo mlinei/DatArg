@@ -37,12 +37,26 @@ const capitalExpenditureFunctions = {
 
 export const sections = [
   {
-    id: 'precios', eyebrow: 'PRECIOS', title: 'Inflación', intro: 'Evolución del IPC nacional y los precios mayoristas publicados por INDEC.', file: 'inflation.csv',
+    id: 'precios', eyebrow: 'PRECIOS', title: 'Inflación', intro: 'Evolución del IPC nacional, los precios mayoristas y el nivel general de precios convertido al dólar oficial.', file: 'inflation.csv',
+    warning: 'La inflación en dólares es un cálculo de DatArg: IPC general dividido por el promedio mensual del dólar oficial minorista de venta. Mide precios locales convertidos a esa cotización; no equivale a la inflación de Estados Unidos ni utiliza dólares financieros.',
     charts: [
       { title: 'Inflación mensual', subtitle: 'Variación porcentual contra el mes anterior', unit: '%', defaultRange: '5Y', series: {
         indec_ipc_general_mom: 'Nivel general', indec_ipc_core_mom: 'Núcleo', indec_ipc_regulated_mom: 'Regulados', indec_ipc_seasonal_mom: 'Estacionales', indec_ipim_general_mom: 'Mayorista'
       }},
-      { title: 'Inflación interanual', subtitle: 'Variación contra igual mes del año anterior', unit: '%', series: { indec_ipc_general_yoy: 'IPC general', indec_ipc_core_yoy: 'IPC núcleo' }}
+      { title: 'Inflación interanual', subtitle: 'Variación contra igual mes del año anterior', unit: '%', series: { indec_ipc_general_yoy: 'IPC general', indec_ipc_core_yoy: 'IPC núcleo' }},
+      { title: 'Inflación en dólares', subtitle: 'IPC general dividido por el promedio mensual del dólar oficial de venta', file: 'usd_inflation.csv', unit: 'índice', defaultRange: 'ALL', sources: [
+        { label: 'INDEC (IPC)', url: 'https://www.indec.gob.ar/indec/web/Nivel4-Tema-3-5-31' },
+        { label: 'ArgentinaDatos (dólar oficial)', url: 'https://api.argentinadatos.com/v1/cotizaciones/dolares/oficial' }
+      ], metricToggle: {
+        default: 'index',
+        labels: { index: 'Índice ene-24=100', mom: 'Variación mensual', yoy: 'Variación interanual' },
+        units: { index: 'índice', mom: '%', yoy: '%' },
+        seriesByMetric: {
+          index: { datarg_usd_inflation_index_jan_2024: 'Nivel de precios en dólares' },
+          mom: { datarg_usd_inflation_mom: 'Inflación mensual en dólares' },
+          yoy: { datarg_usd_inflation_yoy: 'Inflación interanual en dólares' }
+        }
+      }, series: { datarg_usd_inflation_index_jan_2024: 'Nivel de precios en dólares' } }
     ]
   },
   {
