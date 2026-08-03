@@ -27,6 +27,7 @@ from .fx_intervention import run as run_fx_intervention
 from .credit import run as run_credit
 from .debt_maturities import run as run_debt_maturities
 from .yield_curves import run as run_yield_curves
+from .usd_inflation import run as run_usd_inflation
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -114,6 +115,8 @@ def main(argv: list[str] | None = None) -> int:
     yield_curves = sub.add_parser("yield-curves", help="calcula curvas nominal, CER y breakeven con fuentes públicas")
     yield_curves.add_argument("--root", type=Path, default=Path.cwd())
     yield_curves.add_argument("--source-file", type=Path, help="cierre normalizado alternativo con precios y flujos")
+    usd_inflation = sub.add_parser("usd-inflation", help="calcula inflación en dólares desde IPC y dólar oficial")
+    usd_inflation.add_argument("--root", type=Path, default=Path.cwd())
     args = parser.parse_args(argv)
     try:
         if args.command == "inflation":
@@ -163,8 +166,10 @@ def main(argv: list[str] | None = None) -> int:
             result = run_public_investment(args.root.resolve(), args.source_file)
         elif args.command == "debt-maturities":
             result = run_debt_maturities(args.root.resolve(), args.source_file)
-        else:
+        elif args.command == "yield-curves":
             result = run_yield_curves(args.root.resolve(), args.source_file)
+        else:
+            result = run_usd_inflation(args.root.resolve())
     except PipelineError as exc:
         parser.exit(1, f"error: {exc}\n")
     print(json.dumps(result, ensure_ascii=False, indent=2))

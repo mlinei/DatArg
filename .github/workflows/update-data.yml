@@ -88,6 +88,10 @@ jobs:
           aed credit
           aed debt-maturities
 
+      - name: Recalcular inflación en dólares
+        if: steps.frequency.outputs.scope == 'monthly' || steps.frequency.outputs.scope == 'all'
+        run: aed usd-inflation
+
       - name: Validar pipelines
         run: |
           pytest -q

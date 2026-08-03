@@ -21,6 +21,7 @@ export const DATASETS = {
   'treasury_maturities.csv': { label: 'vencimientos del Tesoro', section: 'vencimientos' },
   'reserves.csv': { label: 'reservas brutas', section: 'reservas' },
   'trade.csv': { label: 'comercio exterior', section: 'comercio' },
+  'usd_inflation.csv': { label: 'inflación en dólares', section: 'precios' },
   'wages.csv': { label: 'salarios', section: 'salarios' }
 };
 
