@@ -16,6 +16,7 @@ export const DATASETS = {
   'markets.csv': { label: 'S&P Merval en dólares', section: 'mercados' },
   'net_reserves.csv': { label: 'reservas netas', section: 'reservas-netas' },
   'poverty.csv': { label: 'pobreza e indigencia', section: 'pobreza' },
+  'profit_dividends.csv': { label: 'giros de utilidades y dividendos', section: 'dividendos' },
   'public_debt.csv': { label: 'deuda pública', section: 'deuda' },
   'public_investment.csv': { label: 'inversión pública', section: 'inversion-publica' },
   'treasury_maturities.csv': { label: 'vencimientos del Tesoro', section: 'vencimientos' },

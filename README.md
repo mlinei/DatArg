@@ -122,6 +122,14 @@ aed fx-intervention
 
 Importa las compras y ventas netas de divisas del BCRA en el mercado de cambios y calcula sus acumulados por mes y año calendario. Los valores positivos representan compras netas y los negativos, ventas netas. La unidad es millones de dólares y la serie oficial excluye las operaciones directas con el Tesoro Nacional. La salida queda en `data/processed/fx_intervention.csv`.
 
+## Giros de utilidades y dividendos
+
+```bash
+aed profit-dividends
+```
+
+Importa los egresos mensuales por utilidades y dividendos efectivamente cursados en el mercado de cambios desde 2003. El pipeline invierte el signo contable con el que el BCRA publica los egresos y calcula totales anuales únicamente para años calendario completos. No incluye utilidades reinvertidas ni representa el devengamiento contable de la inversión directa. La salida queda en `data/processed/profit_dividends.csv`.
+
 ## Tasas de interés
 
 ```bash

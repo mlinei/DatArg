@@ -146,6 +146,18 @@ export const sections = [
     }, series: { bcra_fx_intervention_daily: 'Intervención neta diaria' } }]
   },
   {
+    id: 'dividendos', eyebrow: 'MERCADO CAMBIARIO', title: 'Giros de utilidades y dividendos', intro: 'Pagos de utilidades y dividendos al exterior efectivamente cursados por el mercado de cambios.', file: 'profit_dividends.csv',
+    warning: 'Los valores muestran egresos cambiarios, no utilidades contables devengadas ni reinvertidas. La vista anual incluye únicamente años calendario completos; las regulaciones cambiarias pueden afectar la comparación entre períodos.',
+    charts: [{ title: 'Giros de utilidades y dividendos al exterior', subtitle: 'Flujos en millones de dólares', unit: 'USD M', type: 'bar', includeZero: true, defaultRange: '5Y', metricToggle: {
+      default: 'monthly',
+      labels: { monthly: 'Mensual', annual: 'Anual' },
+      seriesByMetric: {
+        monthly: { bcra_profit_dividend_outflows_monthly: 'Giros mensuales' },
+        annual: { bcra_profit_dividend_outflows_annual: 'Giros anuales' }
+      }
+    }, series: { bcra_profit_dividend_outflows_monthly: 'Giros mensuales' } }]
+  },
+  {
     id: 'tasas', eyebrow: 'SISTEMA FINANCIERO', title: 'Tasas de interés', intro: 'Tasas bancarias del BCRA y estructura temporal de rendimientos de la deuda en pesos.', file: 'interest_rates.csv',
     charts: [
       { title: 'Tasas mayoristas', subtitle: 'Tasa nominal anual', unit: '% TNA', defaultRange: '5Y', series: { bcra_badlar_private_tna: 'BADLAR', bcra_tamar_private_tna: 'TAMAR' }},
