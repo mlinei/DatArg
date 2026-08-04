@@ -36,26 +36,38 @@ def _decimal(value: object, context: str) -> Decimal:
         raise PipelineError(f"PIB: valor inválido en {context}: {value!r}") from exc
 
 
-def _matrix(sheet: pd.DataFrame, series_id: str, unit: str, artifact: Artifact) -> tuple[list[dict[str, str]], dict[str, Decimal]]:
+def _matrix(
+    sheet: pd.DataFrame,
+    series_id: str,
+    unit: str,
+    artifact: Artifact,
+    row_code: str = "B1b",
+    row_label: str = "Producto Interno Bruto",
+) -> tuple[list[dict[str, str]], dict[str, Decimal]]:
     if sheet.shape[1] < 120 or sheet.shape[0] < 7:
         raise PipelineError(f"PIB: dimensiones inesperadas en {series_id}: {sheet.shape}")
-    if str(sheet.iat[6, 0]).strip() != "B1b" or "Producto Interno Bruto" not in str(sheet.iat[6, 1]):
-        raise PipelineError(f"PIB: fila B1b ausente en {series_id}")
+    matches = [
+        row for row in range(sheet.shape[0])
+        if str(sheet.iat[row, 0]).strip() == row_code and row_label in str(sheet.iat[row, 1])
+    ]
+    if len(matches) != 1:
+        raise PipelineError(f"PIB: fila {row_code}/{row_label} ausente o duplicada en {series_id}")
+    data_row = matches[0]
     years = sheet.iloc[3].ffill()
     records: list[dict[str, str]] = []
     values: dict[str, Decimal] = {}
     for column in range(2, sheet.shape[1]):
         label = str(sheet.iat[4, column]).strip()
-        if label not in {*QUARTERS, "Total"} or pd.isna(sheet.iat[6, column]):
+        if label not in {*QUARTERS, "Total"} or pd.isna(sheet.iat[data_row, column]):
             continue
         try:
-            year = int(str(years.iat[column]).split()[0])
+            year = int(float(str(years.iat[column]).split()[0]))
         except (TypeError, ValueError):
             continue
         period = str(year) if label == "Total" else f"{year:04d}-Q{QUARTERS[label]}"
         if period in values:
             raise PipelineError(f"PIB: período duplicado en {series_id}/{period}")
-        value = _decimal(sheet.iat[6, column], f"{series_id}/{period}")
+        value = _decimal(sheet.iat[data_row, column], f"{series_id}/{period}")
         values[period] = value
         frequency = "annual" if label == "Total" else "quarterly"
         records.append(_record(f"{series_id}_{frequency}", period, frequency, value, unit, artifact))
@@ -72,10 +84,24 @@ def extract_original(artifact: Artifact) -> tuple[list[dict[str, str]], dict[str
     constant_records, constant_values = _matrix(constant, "indec_gdp_constant_2004", "million_ars_2004", artifact)
     growth_records, growth_values = _matrix(growth, "indec_gdp_growth", "percent_change", artifact)
     current_records, current_values = _matrix(current, "indec_gdp_current", "million_ars_current", artifact)
+    consumption_constant_records, consumption_constant_values = _matrix(
+        constant, "indec_private_consumption_constant_2004", "million_ars_2004", artifact,
+        "P3_S14_S15", "Consumo privado",
+    )
+    consumption_growth_records, consumption_growth_values = _matrix(
+        growth, "indec_private_consumption_growth", "percent_change", artifact,
+        "P3_S14_S15", "Consumo privado",
+    )
+    consumption_current_records, consumption_current_values = _matrix(
+        current, "indec_private_consumption_current", "million_ars_current", artifact,
+        "P3_S14_S15", "Consumo privado",
+    )
     if min(constant_values) != "2004" or "2026-Q1" not in constant_values or "2025" not in constant_values:
         raise PipelineError("PIB: cobertura original inesperada")
     if set(constant_values) != set(current_values):
         raise PipelineError("PIB: cobertura distinta entre precios constantes y corrientes")
+    if set(consumption_constant_values) != set(constant_values) or set(consumption_current_values) != set(current_values):
+        raise PipelineError("PIB: cobertura inesperada del consumo privado")
     for period, official in growth_values.items():
         if "-Q" in period:
             year, quarter = period.split("-Q")
@@ -86,12 +112,48 @@ def extract_original(artifact: Artifact) -> tuple[list[dict[str, str]], dict[str
             calculated = (constant_values[period] / constant_values[prior] - 1) * 100
             if abs(calculated - official) > Decimal("0.0001"):
                 raise PipelineError(f"PIB: crecimiento inconsistente en {period}")
-    return constant_records + growth_records + current_records, constant_values
+    for period, official in consumption_growth_values.items():
+        if "-Q" in period:
+            year, quarter = period.split("-Q")
+            prior = f"{int(year)-1:04d}-Q{quarter}"
+        else:
+            prior = str(int(period) - 1)
+        if period in consumption_constant_values and prior in consumption_constant_values:
+            calculated = (consumption_constant_values[period] / consumption_constant_values[prior] - 1) * 100
+            if abs(calculated - official) > Decimal("0.0001"):
+                raise PipelineError(f"PIB: crecimiento del consumo privado inconsistente en {period}")
+    share_records = [
+        _record(
+            f"indec_private_consumption_gdp_share_{'quarterly' if '-Q' in period else 'annual'}",
+            period,
+            "quarterly" if "-Q" in period else "annual",
+            consumption_current_values[period] / current_values[period] * 100,
+            "percent_gdp",
+            artifact,
+        )
+        for period in current_values
+    ]
+    records = (
+        constant_records + growth_records + current_records
+        + consumption_constant_records + consumption_growth_records + consumption_current_records
+        + share_records
+    )
+    return records, constant_values
 
 
-def _sa_sheet(sheet: pd.DataFrame, series_id: str, unit: str, artifact: Artifact) -> tuple[list[dict[str, str]], dict[str, Decimal]]:
-    if sheet.shape[1] != 8 or "PIB" not in str(sheet.iat[3, 2]):
+def _sa_sheet(
+    sheet: pd.DataFrame,
+    series_id: str,
+    unit: str,
+    artifact: Artifact,
+    column_label: str = "PIB",
+) -> tuple[list[dict[str, str]], dict[str, Decimal]]:
+    if sheet.shape[1] != 8:
         raise PipelineError(f"PIB: esquema desestacionalizado inesperado en {series_id}")
+    columns = [column for column in range(2, sheet.shape[1]) if column_label in str(sheet.iat[3, column])]
+    if len(columns) != 1:
+        raise PipelineError(f"PIB: columna {column_label} ausente o duplicada en {series_id}")
+    data_column = columns[0]
     year: int | None = None
     records: list[dict[str, str]] = []
     values: dict[str, Decimal] = {}
@@ -100,10 +162,10 @@ def _sa_sheet(sheet: pd.DataFrame, series_id: str, unit: str, artifact: Artifact
             try: year = int(float(sheet.iat[row, 0]))
             except (TypeError, ValueError): continue
         quarter = str(sheet.iat[row, 1]).strip()
-        if year is None or quarter not in ROMAN_QUARTERS or pd.isna(sheet.iat[row, 2]):
+        if year is None or quarter not in ROMAN_QUARTERS or pd.isna(sheet.iat[row, data_column]):
             continue
         period = f"{year:04d}-Q{ROMAN_QUARTERS[quarter]}"
-        value = _decimal(sheet.iat[row, 2], f"{series_id}/{period}")
+        value = _decimal(sheet.iat[row, data_column], f"{series_id}/{period}")
         if period in values: raise PipelineError(f"PIB: período duplicado en {series_id}/{period}")
         values[period] = value
         records.append(_record(series_id, period, "quarterly", value, unit, artifact))
@@ -118,6 +180,12 @@ def extract_sa(artifact: Artifact) -> list[dict[str, str]]:
         raise PipelineError(f"PIB: hojas desestacionalizadas ausentes: {exc}") from exc
     level_records, level_values = _sa_sheet(levels, "indec_gdp_sa_constant_2004", "million_ars_2004", artifact)
     change_records, change_values = _sa_sheet(changes, "indec_gdp_sa_qoq", "percent_change", artifact)
+    consumption_level_records, consumption_level_values = _sa_sheet(
+        levels, "indec_private_consumption_sa_constant_2004", "million_ars_2004", artifact, "Consumo privado"
+    )
+    consumption_change_records, consumption_change_values = _sa_sheet(
+        changes, "indec_private_consumption_sa_qoq", "percent_change", artifact, "Consumo privado"
+    )
     periods = list(level_values)
     if periods[0] != "2004-Q1" or periods[-1] != "2026-Q1":
         raise PipelineError("PIB: cobertura desestacionalizada inesperada")
@@ -127,7 +195,16 @@ def extract_sa(artifact: Artifact) -> list[dict[str, str]]:
         calculated = (level_values[period] / level_values[periods[index-1]] - 1) * 100
         if abs(calculated - official) > Decimal("0.0001"):
             raise PipelineError(f"PIB: variación trimestral inconsistente en {period}")
-    return level_records + change_records
+    if list(consumption_level_values) != periods:
+        raise PipelineError("PIB: cobertura desestacionalizada inesperada del consumo privado")
+    for index, period in enumerate(periods[1:], 1):
+        official = consumption_change_values.get(period)
+        if official is None:
+            raise PipelineError(f"PIB: variación desestacionalizada del consumo privado ausente en {period}")
+        calculated = (consumption_level_values[period] / consumption_level_values[periods[index-1]] - 1) * 100
+        if abs(calculated - official) > Decimal("0.0001"):
+            raise PipelineError(f"PIB: variación trimestral del consumo privado inconsistente en {period}")
+    return level_records + change_records + consumption_level_records + consumption_change_records
 
 
 def _existing(path: Path) -> dict[tuple[str, str], str]:

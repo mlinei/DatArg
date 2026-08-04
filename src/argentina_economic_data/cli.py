@@ -74,6 +74,7 @@ def main(argv: list[str] | None = None) -> int:
     intervention = sub.add_parser("fx-intervention", help="ejecuta intervención cambiaria diaria del BCRA")
     intervention.add_argument("--root", type=Path, default=Path.cwd())
     intervention.add_argument("--source-file", type=Path)
+    intervention.add_argument("--futures-dir", type=Path, help="directorio con planillas mensuales NEDD")
     dividends = sub.add_parser("profit-dividends", help="ejecuta giros de utilidades y dividendos al exterior")
     dividends.add_argument("--root", type=Path, default=Path.cwd())
     dividends.add_argument("--source-file", type=Path, help="anexo estadístico local del mercado de cambios")
@@ -148,7 +149,7 @@ def main(argv: list[str] | None = None) -> int:
             files = {i: getattr(args, f"variable_{i}_file") for i in (7, 35, 44, 45)}
             result = run_interest_rates(args.root.resolve(), files)
         elif args.command == "fx-intervention":
-            result = run_fx_intervention(args.root.resolve(), args.source_file)
+            result = run_fx_intervention(args.root.resolve(), args.source_file, args.futures_dir)
         elif args.command == "profit-dividends":
             result = run_profit_dividends(args.root.resolve(), args.source_file)
         elif args.command == "credit":

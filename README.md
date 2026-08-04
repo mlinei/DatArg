@@ -55,7 +55,7 @@ Importa exportaciones, importaciones y saldo comercial mensual del ICA desde ene
 aed gdp
 ```
 
-Importa el PIB trimestral original y desestacionalizado, y el PIB anual oficial del INDEC, a precios constantes de 2004 y corrientes. La salida queda en `data/processed/gdp.csv`.
+Importa el PIB trimestral original y desestacionalizado, y el PIB anual oficial del INDEC, a precios constantes de 2004 y corrientes. También incorpora el consumo privado agregado: nivel real, variaciones trimestral desestacionalizada e interanual, resultado anual y participación en el PIB. La salida queda en `data/processed/gdp.csv`.
 
 ## Mercado laboral
 
@@ -120,7 +120,7 @@ Importa la evolución diaria reportada del riesgo país argentino, en puntos bá
 aed fx-intervention
 ```
 
-Importa las compras y ventas netas de divisas del BCRA en el mercado de cambios y calcula sus acumulados por mes y año calendario. Los valores positivos representan compras netas y los negativos, ventas netas. La unidad es millones de dólares y la serie oficial excluye las operaciones directas con el Tesoro Nacional. La salida queda en `data/processed/fx_intervention.csv`.
+Importa las compras y ventas netas de divisas del BCRA en el mercado de cambios y calcula sus acumulados por mes y año calendario. También extrae de la Planilla de Reservas Internacionales y de Liquidez en Moneda Extranjera las posiciones mensuales cortas y largas en futuros liquidados en pesos y calcula `compras spot − variación de la posición neta vendida`. La interfaz permite alternar entre intervención ajustada, cambio mensual de la posición vendida y posición abierta al cierre. En la vista de futuros, un valor positivo indica que aumentó la posición vendida y uno negativo que se redujo. La medición ajustada es una estimación de DatArg, no un flujo de reservas ni una serie oficial consolidada; excluye al Tesoro y otros instrumentos del sector público. No se atribuye al BCRA el interés abierto diario del mercado porque la fuente pública no identifica titulares. La salida queda en `data/processed/fx_intervention.csv`.
 
 ## Giros de utilidades y dividendos
 

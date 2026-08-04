@@ -11,6 +11,27 @@ DatArg conserva el dato diario oficial y calcula dos vistas adicionales:
 
 Los períodos mensuales y anuales en curso son parciales y cambian con cada nueva observación.
 
+### Ajuste por futuros de dólar
+
+Para aproximar la dirección conjunta de la intervención del propio BCRA, DatArg incorpora la posición nocional mensual en futuros de moneda publicada en la sección IV.1.b de la Planilla de Reservas Internacionales y de Liquidez en Moneda Extranjera del BCRA. La fuente informa por separado las posiciones cortas y largas denominadas en moneda extranjera y liquidadas por otros medios, principalmente en pesos.
+
+La posición neta vendida se define como posición corta menos posición larga. La intervención mensual ajustada se calcula así:
+
+`compras spot del BCRA − variación mensual de la posición neta vendida en futuros`
+
+Por lo tanto:
+
+- un aumento de la posición vendida resta a las compras spot, porque representa presión vendedora de dólares futuros;
+- una reducción de la posición vendida suma, porque desarma esa presión;
+- en la vista específica de futuros se muestra el cambio sin invertir el signo: positivo equivale a aumento de la posición vendida y negativo a reducción;
+- un resultado positivo representa una fuerza neta compradora o alcista sobre el dólar y uno negativo, una fuerza neta vendedora o de contención, manteniendo constantes los demás factores.
+
+La serie calculada comienza en enero de 2023 y solo llega hasta el último cierre mensual publicado en la planilla, que tiene mayor rezago que la intervención spot diaria. No se imputan meses todavía no publicados. La interfaz permite ver tanto el flujo mensual atribuible al cambio de la posición como el último stock abierto oficial, con apertura entre posiciones cortas y largas.
+
+No se presenta una falsa intervención diaria del BCRA en futuros. A3 Mercados divulga volumen e interés abierto diario para el conjunto del mercado, pero esa información no identifica al titular de cada posición. La única frecuencia pública que permite atribuir la exposición específicamente al BCRA es el cierre mensual de esta planilla.
+
+Esta medición no equivale a un flujo de caja ni a una variación de reservas: los contratos relevados se liquidan en pesos. Tampoco es todavía una medición consolidada del sector público, porque excluye operaciones del Tesoro, emisión o recompra de instrumentos dólar linked y otras intervenciones gubernamentales. Es una estimación reproducible de la dirección de la intervención del BCRA bajo una metodología explícita.
+
 ## Crédito al sector privado no financiero
 
 El nivel corresponde al saldo mensual de préstamos de las entidades financieras al sector privado no financiero publicado por el BCRA. Los archivos originales están expresados en miles de pesos y DatArg los convierte a millones de pesos corrientes.

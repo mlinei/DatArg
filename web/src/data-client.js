@@ -7,6 +7,18 @@ const nativeRuntime = Capacitor.isNativePlatform();
 const configuredBase = import.meta.env.VITE_DATA_BASE_URL?.replace(/\/$/, '');
 const DATA_BASE = configuredBase || (nativeRuntime ? 'https://dat-arg.vercel.app/api/data' : '/api/data');
 const FALLBACK_DATA_BASE = nativeRuntime ? 'https://dat-arg.vercel.app/data' : '/data';
+const REQUIRED_SERIES_BY_FILE = Object.freeze({
+  'fx_intervention.csv': [
+    'bcra_fx_futures_net_short_change',
+    'bcra_fx_futures_net_short_position',
+    'bcra_fx_intervention_adjusted_monthly',
+  ],
+  'gdp.csv': [
+    'indec_private_consumption_sa_constant_2004',
+    'indec_private_consumption_sa_qoq',
+    'indec_private_consumption_gdp_share_quarterly',
+  ],
+});
 
 export function parseCSV(text) {
   const records = [];
@@ -78,12 +90,22 @@ async function download(file, base) {
   return text;
 }
 
+function containsRequiredSeries(file, text) {
+  const required = REQUIRED_SERIES_BY_FILE[file];
+  if (!required) return true;
+  const available = new Set(parseCSV(text).map(row => row.series_id));
+  return required.every(seriesId => available.has(seriesId));
+}
+
 async function fetchText(file) {
   try {
     let text;
     let source = 'database';
     try {
       text = await download(file, DATA_BASE);
+      if (!containsRequiredSeries(file, text)) {
+        throw new Error(`${file}: la base todavía no contiene todas las series requeridas`);
+      }
     } catch (databaseError) {
       console.warn(`Turso no disponible para ${file}; se usa el respaldo CSV`, databaseError);
       text = await download(file, FALLBACK_DATA_BASE);
