@@ -2,9 +2,11 @@
   "files": [
     "consolidated_debt.csv",
     "country_risk.csv",
+    "credit.csv",
     "emae.csv",
     "exchange_rates.csv",
     "fiscal.csv",
+    "fx_intervention.csv",
     "gdp.csv",
     "industry.csv",
     "inflation.csv",
@@ -13,11 +15,16 @@
     "markets.csv",
     "net_reserves.csv",
     "poverty.csv",
+    "profit_dividends.csv",
     "public_debt.csv",
     "public_investment.csv",
+    "real_exchange_rate.csv",
     "reserves.csv",
     "trade.csv",
-    "wages.csv"
+    "treasury_maturities.csv",
+    "usd_inflation.csv",
+    "wages.csv",
+    "yield_curves.csv"
   ],
-  "generatedAt": "2026-07-23T14:37:43.838Z"
+  "generatedAt": "2026-08-04T23:16:43.240Z"
 }

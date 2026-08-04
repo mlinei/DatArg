@@ -74,6 +74,14 @@ export const sections = [
     ]
   },
   {
+    id: 'consumo-privado', eyebrow: 'CUENTAS NACIONALES', title: 'Consumo privado', intro: 'Gasto de consumo final privado agregado publicado trimestralmente por el INDEC.', file: 'gdp.csv',
+    warning: 'Es un componente trimestral de la demanda del PIB y no un indicador mensual. El nivel real está expresado a precios constantes de 2004; la participación en el PIB se calcula con valores corrientes del mismo período.',
+    charts: [
+      { title: 'Consumo privado real', subtitle: 'Nivel y variaciones oficiales', unit: 'M ARS 2004', metricToggle: { default: 'sa_level', labels: { sa_level: 'Nivel desestacionalizado', qoq: 'Variación trimestral', yoy: 'Variación interanual', annual_level: 'Nivel anual', annual_growth: 'Variación anual' }, units: { sa_level: 'M ARS 2004', qoq: '%', yoy: '%', annual_level: 'M ARS 2004', annual_growth: '%' }, seriesByMetric: { sa_level: { indec_private_consumption_sa_constant_2004: 'Consumo privado' }, qoq: { indec_private_consumption_sa_qoq: 'Consumo privado' }, yoy: { indec_private_consumption_growth_quarterly: 'Consumo privado' }, annual_level: { indec_private_consumption_constant_2004_annual: 'Consumo privado' }, annual_growth: { indec_private_consumption_growth_annual: 'Consumo privado' } } }, series: { indec_private_consumption_sa_constant_2004: 'Consumo privado' } },
+      { title: 'Consumo privado sobre PIB', subtitle: 'Participación a precios corrientes', unit: '% del PIB', metricToggle: { default: 'quarterly', labels: { quarterly: 'Trimestral', annual: 'Anual' }, units: { quarterly: '%', annual: '%' }, seriesByMetric: { quarterly: { indec_private_consumption_gdp_share_quarterly: 'Consumo privado' }, annual: { indec_private_consumption_gdp_share_annual: 'Consumo privado' } } }, series: { indec_private_consumption_gdp_share_quarterly: 'Consumo privado' } }
+    ]
+  },
+  {
     id: 'industria', eyebrow: 'PRODUCCIÓN', title: 'Industria manufacturera', intro: 'IPI manufacturero general y por rama de actividad.', file: 'industry.csv',
     charts: [{ title: 'Producción industrial', subtitle: 'Compará el nivel de producción o su variación interanual', unit: 'índice', composite: {
       sectors: industry, metrics: { index: 'Nivel del índice', yoy: 'Variación interanual' }, defaultSector: 'total', defaultMetric: 'index'
@@ -133,8 +141,8 @@ export const sections = [
     charts: [{ title: 'Riesgo país', subtitle: 'Puntos básicos', unit: 'pb', defaultRange: '5Y', series: { argentinadatos_country_risk: 'Riesgo país' }}]
   },
   {
-    id: 'intervencion', eyebrow: 'MERCADO CAMBIARIO', title: 'Intervención cambiaria', intro: 'Compras y ventas de divisas del BCRA en el mercado de cambios, con acumulados mensuales y anuales.', file: 'fx_intervention.csv',
-    warning: 'Valores positivos indican compras netas y valores negativos, ventas netas. La serie oficial excluye las operaciones directas del BCRA con el Tesoro Nacional.',
+    id: 'intervencion', eyebrow: 'MERCADO CAMBIARIO', title: 'Intervención cambiaria', intro: 'Compras y ventas spot del BCRA y una medición mensual ajustada por el cambio de su posición en futuros de dólar.', file: 'fx_intervention.csv',
+    warning: 'La intervención ajustada es un cálculo de DatArg, no una serie oficial: compras spot menos el aumento mensual de la posición neta vendida en futuros. Un resultado positivo representa una fuerza neta compradora y uno negativo, una fuerza neta vendedora o de contención del dólar, todo lo demás constante. El BCRA solo publica su posición propia en futuros al cierre de cada mes: el interés abierto diario del mercado no permite identificar al Banco Central. Los futuros se liquidan en pesos y no son un flujo de reservas. La medición todavía excluye operaciones directas con el Tesoro, bonos dólar linked y otras intervenciones del sector público.',
     charts: [{ title: 'Compras y ventas de divisas del BCRA', subtitle: 'Flujo neto en millones de dólares', unit: 'USD M', type: 'bar', includeZero: true, defaultRange: '5Y', metricToggle: {
       default: 'daily',
       labels: { daily: 'Diario', monthly: 'Acumulado mensual', annual: 'Acumulado anual' },
@@ -143,7 +151,16 @@ export const sections = [
         monthly: { bcra_fx_intervention_monthly: 'Acumulado mensual' },
         annual: { bcra_fx_intervention_annual: 'Acumulado anual' }
       }
-    }, series: { bcra_fx_intervention_daily: 'Intervención neta diaria' } }]
+    }, series: { bcra_fx_intervention_daily: 'Intervención neta diaria' } },
+    { title: 'Intervención neta ajustada por futuros', subtitle: 'Flujo mensual y posición abierta del BCRA; millones de dólares', unit: 'USD M', type: 'bar', includeZero: true, defaultRange: '5Y', defaultVisibleByMetric: { adjusted: ['bcra_fx_intervention_adjusted_monthly'], futures: ['bcra_fx_futures_net_short_change'], position: ['bcra_fx_futures_net_short_position'] }, metricToggle: {
+      default: 'adjusted',
+      labels: { adjusted: 'Intervención ajustada', futures: 'Intervención en futuros', position: 'Posición abierta' },
+      seriesByMetric: {
+        adjusted: { bcra_fx_intervention_monthly: 'Compras spot', bcra_fx_futures_net_short_change: 'Cambio posición vendida', bcra_fx_intervention_adjusted_monthly: 'Intervención ajustada' },
+        futures: { bcra_fx_futures_net_short_change: 'Cambio posición vendida' },
+        position: { bcra_fx_futures_net_short_position: 'Posición neta vendida', bcra_fx_futures_short_position: 'Posición vendida bruta', bcra_fx_futures_long_position: 'Posición comprada' }
+      }
+    }, series: { bcra_fx_intervention_monthly: 'Compras spot', bcra_fx_futures_net_short_change: 'Cambio posición vendida', bcra_fx_intervention_adjusted_monthly: 'Intervención ajustada' } }]
   },
   {
     id: 'dividendos', eyebrow: 'MERCADO CAMBIARIO', title: 'Giros de utilidades y dividendos', intro: 'Pagos de utilidades y dividendos al exterior efectivamente cursados por el mercado de cambios.', file: 'profit_dividends.csv',
