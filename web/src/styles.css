@@ -44,8 +44,7 @@ h1 em{font-family:Newsreader,serif;font-weight:500;color:var(--green)}
 .hero-card div{height:1px;background:var(--line);margin:30px 0}
 .manifesto{padding:100px 15vw;display:grid;grid-template-columns:220px 1fr;gap:70px;border-bottom:1px solid var(--line)}
 .manifesto p{font-size:clamp(26px,3vw,48px);line-height:1.28;letter-spacing:-.035em;margin:0;color:#dbeaff}
-.data-section{min-height:92vh;padding:115px 7vw;border-bottom:1px solid var(--line);position:relative}
-.section-number{position:absolute;right:7vw;top:85px;font:300 clamp(70px,10vw,150px) DM Mono;color:rgba(89,167,255,.08)}
+.data-section{min-height:92vh;padding:115px 7vw;border-bottom:1px solid var(--line);position:relative;scroll-margin-top:88px}
 .section-title{max-width:720px;margin-bottom:52px;position:relative}
 .section-title h2{font-size:clamp(42px,5.2vw,78px);letter-spacing:-.055em;margin:15px 0 14px}
 .section-title p{font-size:18px;line-height:1.6;color:var(--muted);max-width:650px}
@@ -131,7 +130,6 @@ footer a{color:var(--green);text-decoration:none;font:400 11px DM Mono}
 .hero-actions{align-items:start;flex-wrap:wrap}
 .data-section{padding:90px 5vw}
 .chart-card{padding:18px;min-height:460px}
-.section-number{top:60px}
 .chart-head{flex-direction:column}
 .chart-select{max-width:100%;width:100%}
 .chart-foot{align-items:start;flex-direction:column}
