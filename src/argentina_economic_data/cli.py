@@ -29,6 +29,7 @@ from .debt_maturities import run as run_debt_maturities
 from .yield_curves import run as run_yield_curves
 from .usd_inflation import run as run_usd_inflation
 from .profit_dividends import run as run_profit_dividends
+from .treasury_liquidity import run as run_treasury_liquidity
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -78,6 +79,10 @@ def main(argv: list[str] | None = None) -> int:
     dividends = sub.add_parser("profit-dividends", help="ejecuta giros de utilidades y dividendos al exterior")
     dividends.add_argument("--root", type=Path, default=Path.cwd())
     dividends.add_argument("--source-file", type=Path, help="anexo estadístico local del mercado de cambios")
+    treasury_liquidity = sub.add_parser("treasury-liquidity", help="ejecuta depósitos del Tesoro en el BCRA")
+    treasury_liquidity.add_argument("--root", type=Path, default=Path.cwd())
+    treasury_liquidity.add_argument("--balance-file", type=Path, help="archivo mensual din1_ser local")
+    treasury_liquidity.add_argument("--valuation-fx-file", type=Path, help="archivo diario din2_ser local")
     credit = sub.add_parser("credit", help="ejecuta crédito privado y exposición al sector público")
     credit.add_argument("--root", type=Path, default=Path.cwd())
     credit.add_argument("--private-file", type=Path)
@@ -152,6 +157,8 @@ def main(argv: list[str] | None = None) -> int:
             result = run_fx_intervention(args.root.resolve(), args.source_file, args.futures_dir)
         elif args.command == "profit-dividends":
             result = run_profit_dividends(args.root.resolve(), args.source_file)
+        elif args.command == "treasury-liquidity":
+            result = run_treasury_liquidity(args.root.resolve(), args.balance_file, args.valuation_fx_file)
         elif args.command == "credit":
             result = run_credit(args.root.resolve(), args.private_file, args.public_file, args.securities_file)
         elif args.command == "consolidated-debt":

@@ -163,6 +163,14 @@ export const sections = [
     }, series: { bcra_fx_intervention_monthly: 'Compras spot', bcra_fx_futures_net_short_change: 'Cambio posición vendida', bcra_fx_intervention_adjusted_monthly: 'Intervención ajustada' } }]
   },
   {
+    id: 'liquidez-tesoro', eyebrow: 'TESORO NACIONAL', title: 'Liquidez del Tesoro en el BCRA', intro: 'Saldos de las cuentas del Gobierno Nacional en pesos y en moneda extranjera depositadas en el Banco Central.', file: 'treasury_liquidity.csv',
+    warning: 'Son saldos contables a fin de mes, no flujos de intervención. La cuenta en dólares es un cálculo de DatArg: el saldo oficial en moneda extranjera, que el balance publica convertido a pesos, se divide por el tipo de cambio de valuación del propio BCRA. Una variación puede responder a cobros, pagos de deuda, operaciones con organismos u otros movimientos del Tesoro; por sí sola no prueba una intervención cambiaria.',
+    charts: [
+      { title: 'Cuenta del Tesoro en pesos', subtitle: 'Saldo de fin de mes y variación mensual', unit: 'M ARS', type: 'bar', defaultRange: '5Y', metricToggle: { default: 'stock', labels: { stock: 'Saldo', change: 'Variación mensual' }, units: { stock: 'M ARS', change: 'M ARS' }, seriesByMetric: { stock: { bcra_treasury_deposits_ars: 'Saldo en pesos' }, change: { bcra_treasury_deposits_ars_monthly_change: 'Variación mensual' } } }, series: { bcra_treasury_deposits_ars: 'Saldo en pesos' } },
+      { title: 'Cuenta del Tesoro en dólares', subtitle: 'Saldo estimado de fin de mes y variación mensual', unit: 'USD M', type: 'bar', defaultRange: '5Y', metricToggle: { default: 'stock', labels: { stock: 'Saldo', change: 'Variación mensual' }, units: { stock: 'USD M', change: 'USD M' }, seriesByMetric: { stock: { bcra_treasury_deposits_usd: 'Saldo en dólares' }, change: { bcra_treasury_deposits_usd_monthly_change: 'Variación mensual' } } }, series: { bcra_treasury_deposits_usd: 'Saldo en dólares' } }
+    ]
+  },
+  {
     id: 'dividendos', eyebrow: 'MERCADO CAMBIARIO', title: 'Giros de utilidades y dividendos', intro: 'Pagos de utilidades y dividendos al exterior efectivamente cursados por el mercado de cambios.', file: 'profit_dividends.csv',
     warning: 'Los valores muestran egresos cambiarios, no utilidades contables devengadas ni reinvertidas. La vista anual incluye únicamente años calendario completos; las regulaciones cambiarias pueden afectar la comparación entre períodos.',
     charts: [{ title: 'Giros de utilidades y dividendos al exterior', subtitle: 'Flujos en millones de dólares', unit: 'USD M', type: 'bar', includeZero: true, defaultRange: '5Y', metricToggle: {

@@ -130,6 +130,14 @@ aed profit-dividends
 
 Importa los egresos mensuales por utilidades y dividendos efectivamente cursados en el mercado de cambios desde 2003. El pipeline invierte el signo contable con el que el BCRA publica los egresos y calcula totales anuales únicamente para años calendario completos. No incluye utilidades reinvertidas ni representa el devengamiento contable de la inversión directa. La salida queda en `data/processed/profit_dividends.csv`.
 
+## Liquidez del Tesoro en el BCRA
+
+```bash
+aed treasury-liquidity
+```
+
+Importa los depósitos del Gobierno Nacional en moneda nacional (serie 106) y extranjera (serie 107) del balance mensual del BCRA. La cuenta en pesos se expresa en millones de ARS. Como el balance valúa contablemente la cuenta extranjera en miles de pesos, el pipeline la divide por el tipo de cambio diario de valuación del BCRA (serie 271), usando el último día hábil disponible al cierre de cada mes, para reconstruir millones de USD. También calcula la variación mensual de ambas cuentas y controla que las series 106 y 107 sumen el total oficial 105. La salida queda en `data/processed/treasury_liquidity.csv`.
+
 ## Tasas de interés
 
 ```bash
