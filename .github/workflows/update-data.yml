@@ -88,6 +88,7 @@ jobs:
           aed credit
           aed debt-maturities
           aed profit-dividends
+          aed treasury-liquidity
 
       - name: Recalcular inflación en dólares
         if: steps.frequency.outputs.scope == 'monthly' || steps.frequency.outputs.scope == 'all'
