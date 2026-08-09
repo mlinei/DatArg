@@ -20,6 +20,7 @@ export const DATASETS = {
   'public_debt.csv': { label: 'deuda pública', section: 'deuda' },
   'public_investment.csv': { label: 'inversión pública', section: 'inversion-publica' },
   'treasury_maturities.csv': { label: 'vencimientos del Tesoro', section: 'vencimientos' },
+  'treasury_liquidity.csv': { label: 'liquidez del Tesoro', section: 'liquidez-tesoro' },
   'reserves.csv': { label: 'reservas brutas', section: 'reservas' },
   'trade.csv': { label: 'comercio exterior', section: 'comercio' },
   'usd_inflation.csv': { label: 'inflación en dólares', section: 'precios' },

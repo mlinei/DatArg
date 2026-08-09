@@ -136,7 +136,7 @@ Importa los egresos mensuales por utilidades y dividendos efectivamente cursados
 aed treasury-liquidity
 ```
 
-Importa los depósitos del Gobierno Nacional en moneda nacional (serie 106) y extranjera (serie 107) del balance mensual del BCRA. La cuenta en pesos se expresa en millones de ARS. Como el balance valúa contablemente la cuenta extranjera en miles de pesos, el pipeline la divide por el tipo de cambio diario de valuación del BCRA (serie 271), usando el último día hábil disponible al cierre de cada mes, para reconstruir millones de USD. También calcula la variación mensual de ambas cuentas y controla que las series 106 y 107 sumen el total oficial 105. La salida queda en `data/processed/treasury_liquidity.csv`.
+Importa los depósitos del Gobierno Nacional en moneda nacional y extranjera con frecuencia diaria desde `diar_bas.xls` (códigos 8842 y 8843) y conserva la serie mensual del balance del BCRA (series 106 y 107). La cuenta en pesos se expresa en millones de ARS. Como el BCRA valúa contablemente la cuenta extranjera en pesos, el pipeline la divide por el tipo de cambio de valuación oficial (código/serie 271) para reconstruir millones de USD. Calcula variaciones entre saldos diarios y mensuales, controla los totales oficiales 269 y 105, y descarta las filas provisionales que el libro diario publica con saldo cero. La salida queda en `data/processed/treasury_liquidity.csv`.
 
 ## Tasas de interés
 

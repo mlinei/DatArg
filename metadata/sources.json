@@ -123,6 +123,23 @@
       "methodology_notes": "Fallback and cross-check for API v4."
     },
     {
+      "source_id": "bcra_daily_government_deposits",
+      "organization": "BCRA",
+      "module": "treasury_liquidity",
+      "series": ["bcra_treasury_deposits_ars_daily", "bcra_treasury_deposits_usd_daily", "daily_balance_changes"],
+      "landing_url": "https://www.bcra.gob.ar/informacion-diaria-sobre-el-sistema-financiero/",
+      "resource_url": "https://www.bcra.gob.ar/archivos/Pdfs/PublicacionesEstadisticas/diar_bas.xls",
+      "format": "xls",
+      "frequency": "daily",
+      "available_from": "2024-01-02",
+      "latest_at_research": "latest_available",
+      "unit": ["million_ars", "million_usd"],
+      "automation_type": "automatic",
+      "revision_history": "Updated in place; trailing future dates may appear temporarily with zero balances.",
+      "break_risks": ["workbook schema change", "series code change", "provisional zero rows"],
+      "methodology_notes": "Codes 8842 and 8843 contain national- and foreign-currency government deposits in million ARS. The foreign-currency balance is divided by valuation FX code 271 to estimate million USD; changes are first differences of valid balances."
+    },
+    {
       "source_id": "bcra_fx_market_intervention",
       "organization": "BCRA",
       "module": "fx_intervention",

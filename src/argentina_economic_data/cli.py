@@ -83,6 +83,7 @@ def main(argv: list[str] | None = None) -> int:
     treasury_liquidity.add_argument("--root", type=Path, default=Path.cwd())
     treasury_liquidity.add_argument("--balance-file", type=Path, help="archivo mensual din1_ser local")
     treasury_liquidity.add_argument("--valuation-fx-file", type=Path, help="archivo diario din2_ser local")
+    treasury_liquidity.add_argument("--daily-balance-file", type=Path, help="planilla diaria diar_bas.xls local")
     credit = sub.add_parser("credit", help="ejecuta crédito privado y exposición al sector público")
     credit.add_argument("--root", type=Path, default=Path.cwd())
     credit.add_argument("--private-file", type=Path)
@@ -158,7 +159,9 @@ def main(argv: list[str] | None = None) -> int:
         elif args.command == "profit-dividends":
             result = run_profit_dividends(args.root.resolve(), args.source_file)
         elif args.command == "treasury-liquidity":
-            result = run_treasury_liquidity(args.root.resolve(), args.balance_file, args.valuation_fx_file)
+            result = run_treasury_liquidity(
+                args.root.resolve(), args.balance_file, args.valuation_fx_file, args.daily_balance_file,
+            )
         elif args.command == "credit":
             result = run_credit(args.root.resolve(), args.private_file, args.public_file, args.securities_file)
         elif args.command == "consolidated-debt":
