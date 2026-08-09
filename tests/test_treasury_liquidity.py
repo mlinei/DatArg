@@ -3,10 +3,15 @@ from pathlib import Path
 
 from argentina_economic_data.inflation import Artifact
 from argentina_economic_data.treasury_liquidity import (
+    ARS_DAILY_CHANGE,
+    ARS_DAILY_STOCK,
     ARS_CHANGE,
     ARS_STOCK,
+    USD_DAILY_CHANGE,
+    USD_DAILY_STOCK,
     USD_CHANGE,
     USD_STOCK,
+    extract_daily,
     extract,
 )
 
@@ -82,3 +87,39 @@ def test_may_2026_public_validation(tmp_path: Path):
     usd = next(Decimal(row["value"]) for row in rows if row["series_id"] == USD_STOCK and row["period"] == "2026-05")
     # The reconstructed stock rounds to the same roughly USD 3.059bn public figure.
     assert abs(usd - Decimal("3059")) < Decimal("2")
+
+
+def test_daily_extract_uses_valuation_fx_and_ignores_provisional_zero_rows(monkeypatch, tmp_path: Path):
+    class Sheet:
+        ncols = 6
+        rows = [["", 269, 8842, 8843, 271, ""]]
+        rows += [[45000 + index, 400 + index * 2, 100 + index, 300 + index, 2, ""] for index in range(501)]
+        rows += [[45501, 0, 0, 0, 5, ""], ["", "", "", "", "", ""]]
+        nrows = len(rows)
+
+        def cell_value(self, row, column):
+            return self.rows[row][column]
+
+    class Workbook:
+        datemode = 0
+
+        @staticmethod
+        def sheet_by_name(name):
+            assert name == "Serie_diaria"
+            return Sheet()
+
+    monkeypatch.setattr("argentina_economic_data.treasury_liquidity.xlrd.open_workbook", lambda _path: Workbook())
+    monkeypatch.setattr(
+        "argentina_economic_data.treasury_liquidity.xlrd.xldate_as_datetime",
+        lambda value, _datemode: __import__("datetime").datetime(2025, 1, 1)
+        + __import__("datetime").timedelta(days=value - 45000),
+    )
+    artifact = _artifact(tmp_path / "daily.xls", "placeholder", "daily")
+    rows = extract_daily(artifact)
+    values = {(row["series_id"], row["period"]): Decimal(row["value"]) for row in rows}
+    last_period = "2026-05-16"
+    assert values[(ARS_DAILY_STOCK, last_period)] == Decimal("600")
+    assert values[(ARS_DAILY_CHANGE, last_period)] == Decimal("1")
+    assert values[(USD_DAILY_STOCK, last_period)] == Decimal("400")
+    assert values[(USD_DAILY_CHANGE, last_period)] == Decimal("0.5")
+    assert all(row["period"] != "2026-05-17" for row in rows)

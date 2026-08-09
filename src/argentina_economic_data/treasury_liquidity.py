@@ -10,13 +10,17 @@ from datetime import datetime, timezone
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
 
+import xlrd
+
 from .inflation import OUTPUT_COLUMNS, Artifact, PipelineError, acquire
 
 BALANCE_URL = "https://www.bcra.gob.ar/archivos/Pdfs/PublicacionesEstadisticas/din1_ser.txt"
 VALUATION_FX_URL = "https://www.bcra.gob.ar/archivos/Pdfs/PublicacionesEstadisticas/din2_ser.txt"
+DAILY_BALANCE_URL = "https://www.bcra.gob.ar/archivos/Pdfs/PublicacionesEstadisticas/diar_bas.xls"
 LANDING_URL = "https://www.bcra.gob.ar/consulta-de-series-estadisticas-en-formato-txt/"
 BALANCE_SOURCE_ID = "bcra_money_credit_balances"
 FX_SOURCE_ID = "bcra_daily_reserves_liabilities"
+DAILY_BALANCE_SOURCE_ID = "bcra_daily_government_deposits"
 
 ARS_CODE = "106"
 FX_DEPOSITS_CODE = "107"
@@ -27,6 +31,15 @@ ARS_STOCK = "bcra_treasury_deposits_ars"
 ARS_CHANGE = "bcra_treasury_deposits_ars_monthly_change"
 USD_STOCK = "bcra_treasury_deposits_usd"
 USD_CHANGE = "bcra_treasury_deposits_usd_monthly_change"
+
+DAILY_TOTAL_CODE = "269"
+DAILY_ARS_CODE = "8842"
+DAILY_FX_DEPOSITS_CODE = "8843"
+DAILY_VALUATION_FX_CODE = "271"
+ARS_DAILY_STOCK = "bcra_treasury_deposits_ars_daily"
+ARS_DAILY_CHANGE = "bcra_treasury_deposits_ars_daily_change"
+USD_DAILY_STOCK = "bcra_treasury_deposits_usd_daily"
+USD_DAILY_CHANGE = "bcra_treasury_deposits_usd_daily_change"
 
 
 def _read_series(artifact: Artifact, wanted: set[str]) -> dict[str, dict[str, Decimal]]:
@@ -68,11 +81,12 @@ def _record(
     source_id: str | None = None,
     source_url: str | None = None,
     source_sha256: str | None = None,
+    frequency: str = "monthly",
 ) -> dict[str, str]:
     return {
         "series_id": series_id,
         "period": period,
-        "frequency": "monthly",
+        "frequency": frequency,
         "value": format(value.quantize(Decimal("0.000001")), "f"),
         "unit": unit,
         "status": status,
@@ -83,7 +97,99 @@ def _record(
     }
 
 
-def extract(balance: Artifact, valuation_fx: Artifact) -> list[dict[str, str]]:
+def _code(value: object) -> str:
+    if isinstance(value, (int, float)) and float(value).is_integer():
+        return str(int(value))
+    return str(value).strip()
+
+
+def _daily_rows(artifact: Artifact) -> list[tuple[str, Decimal, Decimal, Decimal, Decimal]]:
+    try:
+        workbook = xlrd.open_workbook(artifact.path)
+        sheet = workbook.sheet_by_name("Serie_diaria")
+    except (OSError, xlrd.XLRDError) as exc:
+        raise PipelineError(f"liquidez del Tesoro: no se pudo abrir la planilla diaria: {exc}") from exc
+
+    wanted = {DAILY_TOTAL_CODE, DAILY_ARS_CODE, DAILY_FX_DEPOSITS_CODE, DAILY_VALUATION_FX_CODE}
+    code_row = -1
+    columns: dict[str, int] = {}
+    for row_index in range(min(80, sheet.nrows)):
+        candidate = {_code(sheet.cell_value(row_index, column)): column for column in range(sheet.ncols)}
+        if wanted <= candidate.keys():
+            code_row = row_index
+            columns = {code: candidate[code] for code in wanted}
+            break
+    if code_row < 0:
+        raise PipelineError("liquidez del Tesoro: cambió el esquema de códigos de la planilla diaria")
+
+    result: list[tuple[str, Decimal, Decimal, Decimal, Decimal]] = []
+    for row_index in range(code_row + 1, sheet.nrows):
+        raw_date = sheet.cell_value(row_index, 0)
+        if not isinstance(raw_date, (int, float)) or raw_date <= 0:
+            continue
+        try:
+            values = {
+                code: Decimal(str(sheet.cell_value(row_index, column)))
+                for code, column in columns.items()
+            }
+        except (InvalidOperation, ValueError):
+            continue
+        total = values[DAILY_TOTAL_CODE]
+        ars = values[DAILY_ARS_CODE]
+        foreign_ars = values[DAILY_FX_DEPOSITS_CODE]
+        valuation_fx = values[DAILY_VALUATION_FX_CODE]
+        # El BCRA suele adelantar fechas todavía no informadas con saldos cero.
+        if total == 0 and ars == 0 and foreign_ars == 0:
+            continue
+        if min(total, ars, foreign_ars) < 0 or valuation_fx <= 0:
+            raise PipelineError(f"liquidez del Tesoro: valor diario inválido en la fila {row_index + 1}")
+        if abs(total - ars - foreign_ars) > Decimal("1"):
+            raise PipelineError(f"liquidez del Tesoro: componentes diarios inconsistentes en la fila {row_index + 1}")
+        period = xlrd.xldate_as_datetime(raw_date, workbook.datemode).date().isoformat()
+        result.append((period, total, ars, foreign_ars, valuation_fx))
+
+    if len(result) < 500 or result[-1][0] < "2025-01-01":
+        raise PipelineError("liquidez del Tesoro: cobertura diaria inesperada")
+    if len({row[0] for row in result}) != len(result):
+        raise PipelineError("liquidez del Tesoro: fechas diarias duplicadas")
+    return result
+
+
+def extract_daily(artifact: Artifact) -> list[dict[str, str]]:
+    records: list[dict[str, str]] = []
+    previous_ars: Decimal | None = None
+    previous_usd: Decimal | None = None
+    for period, _total, ars, foreign_ars, valuation_fx in _daily_rows(artifact):
+        usd = foreign_ars / valuation_fx
+        records.append(_record(
+            ARS_DAILY_STOCK, period, ars, "million_ars", artifact, frequency="daily",
+        ))
+        records.append(_record(
+            USD_DAILY_STOCK, period, usd, "million_usd", artifact,
+            status="calculated", source_id="bcra_treasury_deposits_usd_daily_calculated",
+            frequency="daily",
+        ))
+        if previous_ars is not None:
+            records.append(_record(
+                ARS_DAILY_CHANGE, period, ars - previous_ars, "million_ars", artifact,
+                status="calculated", frequency="daily",
+            ))
+        if previous_usd is not None:
+            records.append(_record(
+                USD_DAILY_CHANGE, period, usd - previous_usd, "million_usd", artifact,
+                status="calculated", source_id="bcra_treasury_deposits_usd_daily_calculated",
+                frequency="daily",
+            ))
+        previous_ars = ars
+        previous_usd = usd
+    return records
+
+
+def extract(
+    balance: Artifact,
+    valuation_fx: Artifact,
+    daily_balance: Artifact | None = None,
+) -> list[dict[str, str]]:
     balances = _read_series(
         balance,
         {OFFICIAL_DEPOSITS_CODE, ARS_CODE, FX_DEPOSITS_CODE},
@@ -145,6 +251,8 @@ def extract(balance: Artifact, valuation_fx: Artifact) -> list[dict[str, str]]:
             ))
         previous_usd = usd
 
+    if daily_balance is not None:
+        records.extend(extract_daily(daily_balance))
     return records
 
 
@@ -202,9 +310,13 @@ def run(
     root: Path,
     balance_file: Path | None = None,
     valuation_fx_file: Path | None = None,
+    daily_balance_file: Path | None = None,
 ) -> dict[str, object]:
     run_id = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     raw = root / "data" / "raw"
     balance = acquire(BALANCE_SOURCE_ID, BALANCE_URL, raw, balance_file, min_bytes=1000)
     valuation_fx = acquire(FX_SOURCE_ID, VALUATION_FX_URL, raw, valuation_fx_file, min_bytes=1000)
-    return promote(extract(balance, valuation_fx), root, run_id)
+    daily_balance = acquire(
+        DAILY_BALANCE_SOURCE_ID, DAILY_BALANCE_URL, raw, daily_balance_file, min_bytes=100_000,
+    )
+    return promote(extract(balance, valuation_fx, daily_balance), root, run_id)
