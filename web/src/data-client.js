@@ -27,6 +27,12 @@ const REQUIRED_SERIES_BY_FILE = Object.freeze({
     'bcra_broad_financial_liabilities',
     'bcra_total_accounting_liabilities',
   ],
+  'treasury_liquidity.csv': [
+    'bcra_treasury_deposits_ars_daily',
+    'bcra_treasury_deposits_ars_daily_change',
+    'bcra_treasury_deposits_usd_daily',
+    'bcra_treasury_deposits_usd_daily_change',
+  ],
 });
 
 export function parseCSV(text) {
