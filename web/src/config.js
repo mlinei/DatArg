@@ -60,10 +60,13 @@ export const sections = [
     ]
   },
   {
-    id: 'actividad', eyebrow: 'ACTIVIDAD', title: 'Actividad económica', intro: 'EMAE mensual y desempeño sectorial. Base 2004=100.', file: 'emae.csv',
+    id: 'actividad', eyebrow: 'ACTIVIDAD', title: 'Actividad económica', intro: 'EMAE mensual y desempeño sectorial. Serie general base 2004=100 e índices sectoriales con enero de 2020=100.', file: 'emae.csv',
     charts: [
       { title: 'EMAE', subtitle: 'Índice desestacionalizado y tendencia-ciclo', unit: 'índice', series: { indec_emae_sa_index: 'Desestacionalizado', indec_emae_trend_cycle_index: 'Tendencia-ciclo' }},
-      { title: 'Crecimiento por sector', subtitle: 'Variación interanual; elegí un sector', unit: '%', selector: Object.fromEntries(Object.entries(sectors).map(([k,v]) => [`indec_emae_sector_${k}_yoy`,v])), selected: 'indec_emae_sector_manufacturing_yoy' }
+      { title: 'Actividad por sector', subtitle: 'Compará el nivel relativo o la variación interanual de cada sector', unit: 'índice', composite: {
+        sectors, metrics: { index_jan_2020_100: 'Nivel (ene-20=100)', yoy: 'Variación interanual' }, units: { index_jan_2020_100: 'índice', yoy: '%' },
+        seriesPattern: 'indec_emae_sector_{sector}_{metric}', dimensionLabel: 'Sector', defaultSector: 'manufacturing', defaultMetric: 'index_jan_2020_100'
+      }}
     ]
   },
   {
@@ -183,9 +186,11 @@ export const sections = [
     }, series: { bcra_profit_dividend_outflows_monthly: 'Giros mensuales' } }]
   },
   {
-    id: 'tasas', eyebrow: 'SISTEMA FINANCIERO', title: 'Tasas de interés', intro: 'Tasas bancarias del BCRA y estructura temporal de rendimientos de la deuda en pesos.', file: 'interest_rates.csv',
+    id: 'tasas', eyebrow: 'SISTEMA FINANCIERO', title: 'Tasas de interés', intro: 'Tasas bancarias, exigencias de liquidez del BCRA y estructura temporal de rendimientos de la deuda en pesos.', file: 'interest_rates.csv',
+    warning: 'La tasa de encajes es la exigencia normativa promedio ponderada sobre depósitos y otras obligaciones. No es una alícuota única para todos los depósitos ni el ratio contable de liquidez de cada banco: cambia con la composición por moneda, plazo e instrumento. Desde agosto de 2025 el BCRA restableció el cumplimiento diario de los requisitos de efectivo mínimo.',
     charts: [
       { title: 'Tasas mayoristas', subtitle: 'Tasa nominal anual', unit: '% TNA', defaultRange: '5Y', series: { bcra_badlar_private_tna: 'BADLAR', bcra_tamar_private_tna: 'TAMAR' }},
+      { title: 'Encajes bancarios', subtitle: 'Exigencia normativa promedio ponderada sobre depósitos y otras obligaciones', file: 'reserve_requirements.csv', unit: '%', defaultRange: '10Y', defaultVisible: ['bcra_reserve_requirement_total'], series: { bcra_reserve_requirement_total: 'Total', bcra_reserve_requirement_ars: 'Pesos', bcra_reserve_requirement_fx: 'Moneda extranjera' }},
       { title: 'Curvas de deuda en pesos', subtitle: 'TIR efectiva anual por plazo al vencimiento', file: 'yield_curves.csv', renderer: 'yield-curves' }
     ]
   },
@@ -217,10 +222,10 @@ export const sections = [
     ]
   },
   {
-    id: 'deuda', eyebrow: 'FINANZAS PÚBLICAS', title: 'Deuda pública', intro: 'Dos magnitudes separadas: deuda bruta de la Administración Central y pasivos financieros seleccionados del BCRA.', file: 'public_debt.csv', warning: 'Las series no se suman ni equivalen a deuda neta consolidada. Los pasivos seleccionados del BCRA incluyen LEBAC, NOBAC y otras letras emitidas en pesos y moneda extranjera; LELIQ y NOTALIQ; pases pasivos en pesos; y pases pasivos o REPO en dólares con el exterior. Los componentes en pesos se convierten al dólar mayorista de cierre mensual.',
+    id: 'deuda', eyebrow: 'FINANZAS PÚBLICAS', title: 'Deuda pública', intro: 'Deuda bruta de la Administración Central y tres perímetros complementarios de pasivos del BCRA.', file: 'public_debt.csv', warning: 'Las series del Tesoro y del BCRA no se suman ni equivalen a deuda neta consolidada. “Remunerados” conserva la selección de letras, LELIQ/NOTALIQ y pases. “Amplios” suma, sin duplicar subtotales, pasivos monetarios, títulos del BCRA, pases pasivos, depósitos del Gobierno y asignaciones de DEG informados en la planilla diaria. “Total contable” es el renglón TOTAL DEL PASIVO del balance semanal resumido y por eso también incluye otras obligaciones contables. Los importes en pesos se convierten a USD con el tipo de cambio de valuación de cada fuente.',
     charts: [
       { title: 'Deuda bruta del Tesoro', subtitle: 'Administración Central; nivel en USD o proporción del PIB', unit: 'USD M', metricToggle: { default: 'usd', labels: { usd: 'Millones de USD', gdp: 'Porcentaje del PIB' }, units: { usd: 'USD M', gdp: '%' }, seriesByMetric: { usd: { mecon_gross_central_government_debt: 'Tesoro' }, gdp: { mecon_gross_central_government_debt_gdp_ratio: 'Tesoro' } } }, series: { mecon_gross_central_government_debt: 'Tesoro' }},
-      { title: 'Pasivos seleccionados del BCRA', subtitle: 'Instrumentos remunerados convertidos a USD', unit: 'USD M', series: { bcra_interest_bearing_liabilities: 'BCRA' }}
+      { title: 'Pasivos del BCRA', subtitle: 'Elegí el perímetro: remunerados, agregado amplio o total contable', unit: 'USD M', metricToggle: { default: 'remunerated', labels: { remunerated: 'Remunerados', broad: 'Amplios', accounting: 'Total contable' }, units: { remunerated: 'USD M', broad: 'USD M', accounting: 'USD M' }, seriesByMetric: { remunerated: { bcra_interest_bearing_liabilities: 'Pasivos remunerados' }, broad: { bcra_broad_financial_liabilities: 'Pasivos amplios' }, accounting: { bcra_total_accounting_liabilities: 'Pasivo contable total' } } }, series: { bcra_interest_bearing_liabilities: 'Pasivos remunerados' }}
     ]
   },
   {

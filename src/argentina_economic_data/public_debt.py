@@ -10,6 +10,7 @@ from decimal import Decimal
 from pathlib import Path
 
 import pandas as pd
+import xlrd
 
 from .inflation import OUTPUT_COLUMNS, Artifact, PipelineError, acquire
 
@@ -20,12 +21,39 @@ QUARTERLY_ID = "mecon_quarterly_public_debt"
 QUARTERLY_URL = "https://www.argentina.gob.ar/sites/default/files/deuda_publica_31-03-2026.xlsx"
 HISTORICAL_URL = "https://www.argentina.gob.ar/economia/finanzas/datos-trimestrales-de-la-deuda/datos-anteriores"
 BCRA_BASE = "https://api.bcra.gob.ar/estadisticas/v4.0/Monetarias"
+DAILY_LIABILITIES_ID = "bcra_daily_main_liabilities"
+DAILY_LIABILITIES_URL = "https://www.bcra.gob.ar/archivos/Pdfs/PublicacionesEstadisticas/diar_bas.xls"
+WEEKLY_BALANCE_ID = "bcra_weekly_balance"
+WEEKLY_BALANCE_URL = "https://www.bcra.gob.ar/archivos/Pdfs/PublicacionesEstadisticas/estados-resumidos-activos-pasivos-bcra-serie-anual-1998-actualidad.xls"
 # Pasivos financieros remunerados: letras en ARS y ME, LELIQ/NOTALIQ, pases en ARS
 # y pases pasivos con el exterior. El TC mayorista convierte todo a USD.
 BCRA_ARS_COMPONENTS = (1258, 1259, 1260, 1262)
 BCRA_USD_COMPONENTS = (76,)
 BCRA_FX = 5
 BCRA_VARIABLES = BCRA_ARS_COMPONENTS + BCRA_USD_COMPONENTS + (BCRA_FX,)
+
+# Códigos de diar_bas.xls. Todos están valuados en millones de ARS salvo
+# asignaciones de DEG, que se publican en millones de USD.
+DAILY_MONETARY_LIABILITIES = "249"
+DAILY_ARS_SECURITIES = "259"
+DAILY_FX_SECURITIES = "262"
+DAILY_LELIQ_NOTALIQ = "7915"
+DAILY_NOCOM = "7918"
+DAILY_PASSIVE_REPOS = "266"
+DAILY_LIQUIDITY_BILLS = "268"
+DAILY_GOVERNMENT_DEPOSITS = "269"
+DAILY_VALUATION_FX = "271"
+DAILY_SDR_ALLOCATIONS = "274"
+DAILY_BROAD_COMPONENTS = (
+    DAILY_MONETARY_LIABILITIES,
+    DAILY_ARS_SECURITIES,
+    DAILY_FX_SECURITIES,
+    DAILY_LELIQ_NOTALIQ,
+    DAILY_NOCOM,
+    DAILY_PASSIVE_REPOS,
+    DAILY_LIQUIDITY_BILLS,
+    DAILY_GOVERNMENT_DEPOSITS,
+)
 
 
 def _record(series_id: str, period: str, value: Decimal, artifact: Artifact) -> dict[str, str]:
@@ -158,6 +186,129 @@ def calculate_bcra_monthly(series: dict[int, dict[date, Decimal]], artifacts: di
     return records
 
 
+def _daily_code(value: object) -> str:
+    if isinstance(value, (int, float)) and float(value).is_integer():
+        return str(int(value))
+    return str(value).strip()
+
+
+def calculate_bcra_broad_value(values: dict[str, Decimal]) -> Decimal:
+    fx = values[DAILY_VALUATION_FX]
+    if fx <= 0:
+        raise PipelineError("pasivos amplios BCRA: tipo de cambio de valuación no positivo")
+    total_ars = sum((values.get(code, Decimal(0)) for code in DAILY_BROAD_COMPONENTS), Decimal(0))
+    total_ars += values.get(DAILY_SDR_ALLOCATIONS, Decimal(0)) * fx
+    return total_ars / fx
+
+
+def extract_bcra_broad_monthly(artifact: Artifact) -> list[dict[str, str]]:
+    """Calcula un agregado amplio, sin confundirlo con el total contable."""
+    try:
+        workbook = xlrd.open_workbook(artifact.path)
+        sheet = workbook.sheet_by_name("Serie_diaria")
+    except (OSError, xlrd.XLRDError) as exc:
+        raise PipelineError(f"pasivos amplios BCRA: planilla ilegible: {exc}") from exc
+
+    wanted = set(DAILY_BROAD_COMPONENTS) | {DAILY_VALUATION_FX, DAILY_SDR_ALLOCATIONS}
+    columns: dict[str, int] = {}
+    code_row = -1
+    for row_index in range(min(80, sheet.nrows)):
+        candidate = {_daily_code(sheet.cell_value(row_index, col)): col for col in range(sheet.ncols)}
+        # La columna de DEG puede quedar sin datos, pero el código debe existir.
+        if wanted <= candidate.keys():
+            columns = {code: candidate[code] for code in wanted}
+            code_row = row_index
+            break
+    if code_row < 0:
+        raise PipelineError("pasivos amplios BCRA: cambió el esquema de códigos de diar_bas.xls")
+
+    monthly: dict[str, tuple[date, Decimal]] = {}
+    valid_rows = 0
+    for row_index in range(code_row + 1, sheet.nrows):
+        raw_date = sheet.cell_value(row_index, 0)
+        if not isinstance(raw_date, (int, float)) or raw_date <= 0:
+            continue
+        if sheet.cell_value(row_index, columns[DAILY_VALUATION_FX]) in ("", None):
+            # La serie de tipo de cambio de valuación comienza después que el libro.
+            continue
+        values: dict[str, Decimal] = {}
+        try:
+            for code, col in columns.items():
+                raw_value = sheet.cell_value(row_index, col)
+                values[code] = Decimal(0) if raw_value in ("", None) else Decimal(str(raw_value))
+        except (ValueError, ArithmeticError):
+            continue
+        # El libro suele adelantar jornadas provisionales con todos los saldos en cero.
+        if values[DAILY_MONETARY_LIABILITIES] == 0:
+            continue
+        if any(values[code] < 0 for code in wanted) or values[DAILY_VALUATION_FX] <= 0:
+            raise PipelineError(f"pasivos amplios BCRA: dato inválido en fila {row_index + 1}")
+        observation_date = xlrd.xldate_as_datetime(raw_date, workbook.datemode).date()
+        total_usd = calculate_bcra_broad_value(values)
+        period = f"{observation_date.year:04d}-{observation_date.month:02d}"
+        if period not in monthly or observation_date > monthly[period][0]:
+            monthly[period] = (observation_date, total_usd)
+        valid_rows += 1
+
+    if valid_rows < 500 or not monthly or max(monthly) < "2025-01":
+        raise PipelineError("pasivos amplios BCRA: cobertura inesperada")
+    return [
+        _record("bcra_broad_financial_liabilities", period, value, artifact)
+        for period, (_date, value) in sorted(monthly.items())
+    ]
+
+
+def extract_bcra_total_accounting_monthly(artifact: Artifact) -> list[dict[str, str]]:
+    """Extrae TOTAL DEL PASIVO del estado semanal y lo convierte a USD."""
+    observations: dict[date, Decimal] = {}
+    try:
+        book = pd.ExcelFile(artifact.path)
+        sheets = [name for name in book.sheet_names if "semanal" in name.lower()]
+        for sheet_name in sheets:
+            frame = pd.read_excel(artifact.path, sheet_name=sheet_name, header=None)
+            labels = frame.iloc[:, 0].astype(str).str.strip()
+            total_hits = labels[labels.eq("TOTAL DEL PASIVO")].index.tolist()
+            fx_hits = labels[labels.eq("Tipo de Cambio")].index.tolist()
+            if not total_hits or not fx_hits:
+                continue
+            # El primer bloque es la serie publicada; debajo puede haber un bloque
+            # de reexpresión contable con observaciones aisladas.
+            total_row, fx_row = total_hits[0], fx_hits[0]
+            date_row = next(
+                index for index in range(min(10, len(frame)))
+                if sum(isinstance(value, (datetime, pd.Timestamp)) for value in frame.iloc[index, 1:]) >= 1
+            )
+            for col in range(1, frame.shape[1]):
+                raw_date = frame.iat[date_row, col]
+                if not isinstance(raw_date, (datetime, pd.Timestamp)):
+                    continue
+                raw_total, raw_fx = frame.iat[total_row, col], frame.iat[fx_row, col]
+                if pd.isna(raw_total) or pd.isna(raw_fx):
+                    continue
+                total, fx = Decimal(str(raw_total)), Decimal(str(raw_fx))
+                if total <= 0 or fx <= 0:
+                    raise PipelineError(f"pasivo contable BCRA: dato inválido en {raw_date}")
+                observation_date = pd.Timestamp(raw_date).date()
+                # El estado resumido está expresado en miles de ARS.
+                observations[observation_date] = total / Decimal(1000) / fx
+    except Exception as exc:
+        if isinstance(exc, PipelineError):
+            raise
+        raise PipelineError(f"pasivo contable BCRA: balance semanal ilegible: {exc}") from exc
+
+    monthly: dict[str, tuple[date, Decimal]] = {}
+    for observation_date, value in observations.items():
+        period = f"{observation_date.year:04d}-{observation_date.month:02d}"
+        if period not in monthly or observation_date > monthly[period][0]:
+            monthly[period] = (observation_date, value)
+    if len(monthly) < 250 or min(monthly) > "1999-01" or max(monthly) < "2025-01":
+        raise PipelineError("pasivo contable BCRA: cobertura semanal inesperada")
+    return [
+        _record("bcra_total_accounting_liabilities", period, value, artifact)
+        for period, (_date, value) in sorted(monthly.items())
+    ]
+
+
 def _acquire_bcra(root: Path, variable_id: int, local: Path | None) -> tuple[Artifact, dict[date, Decimal]]:
     artifacts = []
     offset = 0
@@ -204,12 +355,33 @@ def promote(records: list[dict[str, str]], root: Path, run_id: str) -> dict[str,
     return report
 
 
-def run(root: Path, treasury_file: Path | None = None, bcra_files: dict[int, Path | None] | None = None, quarterly_file: Path | None = None) -> dict[str, object]:
+def run(
+    root: Path,
+    treasury_file: Path | None = None,
+    bcra_files: dict[int, Path | None] | None = None,
+    quarterly_file: Path | None = None,
+    daily_liabilities_file: Path | None = None,
+    weekly_balance_file: Path | None = None,
+) -> dict[str, object]:
     run_id = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ"); raw = root/"data"/"raw"
     treasury = acquire(TREASURY_ID, TREASURY_URL, raw, treasury_file)
     quarterly = acquire(QUARTERLY_ID, QUARTERLY_URL, raw, quarterly_file)
+    daily_liabilities = acquire(
+        DAILY_LIABILITIES_ID, DAILY_LIABILITIES_URL, raw, daily_liabilities_file, min_bytes=100_000,
+    )
+    weekly_balance = acquire(
+        WEEKLY_BALANCE_ID, WEEKLY_BALANCE_URL, raw, weekly_balance_file, min_bytes=100_000,
+    )
     artifacts = {}; series = {}; bcra_files = bcra_files or {}
     for variable_id in BCRA_VARIABLES:
         artifacts[variable_id], series[variable_id] = _acquire_bcra(raw, variable_id, bcra_files.get(variable_id))
     historical = extract_historical_levels(root/"data"/"reference"/"public_debt_historical.csv", quarterly)
-    return promote(historical + extract_treasury(treasury) + extract_gdp_ratio(quarterly) + calculate_bcra_monthly(series, artifacts), root, run_id)
+    records = (
+        historical
+        + extract_treasury(treasury)
+        + extract_gdp_ratio(quarterly)
+        + calculate_bcra_monthly(series, artifacts)
+        + extract_bcra_broad_monthly(daily_liabilities)
+        + extract_bcra_total_accounting_monthly(weekly_balance)
+    )
+    return promote(records, root, run_id)

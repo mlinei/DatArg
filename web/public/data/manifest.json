@@ -19,6 +19,7 @@
     "public_debt.csv",
     "public_investment.csv",
     "real_exchange_rate.csv",
+    "reserve_requirements.csv",
     "reserves.csv",
     "trade.csv",
     "treasury_liquidity.csv",
@@ -27,5 +28,5 @@
     "wages.csv",
     "yield_curves.csv"
   ],
-  "generatedAt": "2026-08-09T07:09:40.606Z"
+  "generatedAt": "2026-08-09T22:04:07.606Z"
 }
