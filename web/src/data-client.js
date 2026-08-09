@@ -8,6 +8,10 @@ const configuredBase = import.meta.env.VITE_DATA_BASE_URL?.replace(/\/$/, '');
 const DATA_BASE = configuredBase || (nativeRuntime ? 'https://dat-arg.vercel.app/api/data' : '/api/data');
 const FALLBACK_DATA_BASE = nativeRuntime ? 'https://dat-arg.vercel.app/data' : '/data';
 const REQUIRED_SERIES_BY_FILE = Object.freeze({
+  'emae.csv': [
+    'indec_emae_sector_manufacturing_index_jan_2020_100',
+    'indec_emae_sector_manufacturing_yoy',
+  ],
   'fx_intervention.csv': [
     'bcra_fx_futures_net_short_change',
     'bcra_fx_futures_net_short_position',
@@ -17,6 +21,11 @@ const REQUIRED_SERIES_BY_FILE = Object.freeze({
     'indec_private_consumption_sa_constant_2004',
     'indec_private_consumption_sa_qoq',
     'indec_private_consumption_gdp_share_quarterly',
+  ],
+  'public_debt.csv': [
+    'bcra_interest_bearing_liabilities',
+    'bcra_broad_financial_liabilities',
+    'bcra_total_accounting_liabilities',
   ],
 });
 
