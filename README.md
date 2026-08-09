@@ -31,7 +31,7 @@ El proceso falla antes de promover si recibe HTML, un archivo vacío, un esquema
 aed emae
 ```
 
-Importa el EMAE agregado —serie original, desestacionalizada y tendencia-ciclo— y los índices e interanuales de los sectores oficiales. La salida queda en `data/processed/emae.csv`; los libros y reportes de revisiones siguen la misma política inmutable que inflación.
+Importa el EMAE agregado —serie original, desestacionalizada y tendencia-ciclo— y los índices e interanuales de los sectores oficiales. Para facilitar comparaciones temporales, también calcula para cada sector un índice con enero de 2020=100 a partir del nivel oficial; no compara el tamaño absoluto entre sectores. La salida queda en `data/processed/emae.csv`; los libros y reportes de revisiones siguen la misma política inmutable que inflación.
 
 ## Pobreza e indigencia
 
@@ -146,6 +146,14 @@ aed interest-rates
 
 Importa BADLAR y TAMAR de bancos privados, tanto TNA como TEA, desde la API v4 oficial del BCRA. La salida queda en `data/processed/interest_rates.csv`.
 
+### Encajes bancarios
+
+```bash
+aed reserve-requirements
+```
+
+Importa las series oficiales 1554, 1555 y 1556 del BCRA: exigencia promedio de efectivo mínimo sobre depósitos y otras obligaciones para el total, moneda nacional y moneda extranjera. Son tasas normativas promedio ponderadas por los saldos sujetos a encaje, no una única alícuota aplicable a todos los depósitos. La salida queda en `data/processed/reserve_requirements.csv`.
+
 ### Curvas nominal, CER e inflación breakeven
 
 ```bash
@@ -192,7 +200,7 @@ Publica una estimación documentada de deuda estatal neta (Tesoro + BCRA − act
 aed public-debt
 ```
 
-Publica por separado la deuda bruta de la Administración Central y los pasivos financieros remunerados del BCRA. El nivel del Tesoro incluye cierres anuales desde 2013 y datos mensuales desde 2019; también incorpora la relación oficial deuda/PIB desde 2000. No calcula ni presenta una suma consolidada. La salida queda en `data/processed/public_debt.csv`.
+Publica por separado la deuda bruta de la Administración Central y tres perímetros de pasivos del BCRA: remunerados, un agregado amplio construido con la planilla diaria de principales pasivos y el total contable del balance semanal resumido. El agregado amplio evita sumar subtotales entre sí e incluye pasivos monetarios, títulos del BCRA, pases pasivos, depósitos del Gobierno y asignaciones de DEG. El total contable usa el renglón oficial `TOTAL DEL PASIVO`, por lo que es la medida exhaustiva. El nivel del Tesoro incluye cierres anuales desde 2013 y datos mensuales desde 2019; también incorpora la relación oficial deuda/PIB desde 2000. No calcula ni presenta una suma consolidada. La salida queda en `data/processed/public_debt.csv`.
 
 ## Esquema de vencimientos del Tesoro
 

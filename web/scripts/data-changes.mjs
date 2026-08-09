@@ -19,6 +19,7 @@ export const DATASETS = {
   'profit_dividends.csv': { label: 'giros de utilidades y dividendos', section: 'dividendos' },
   'public_debt.csv': { label: 'deuda pública', section: 'deuda' },
   'public_investment.csv': { label: 'inversión pública', section: 'inversion-publica' },
+  'reserve_requirements.csv': { label: 'encajes bancarios', section: 'tasas' },
   'treasury_maturities.csv': { label: 'vencimientos del Tesoro', section: 'vencimientos' },
   'treasury_liquidity.csv': { label: 'liquidez del Tesoro', section: 'liquidez-tesoro' },
   'reserves.csv': { label: 'reservas brutas', section: 'reservas' },

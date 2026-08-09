@@ -30,6 +30,7 @@ from .yield_curves import run as run_yield_curves
 from .usd_inflation import run as run_usd_inflation
 from .profit_dividends import run as run_profit_dividends
 from .treasury_liquidity import run as run_treasury_liquidity
+from .reserve_requirements import run as run_reserve_requirements
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -72,6 +73,9 @@ def main(argv: list[str] | None = None) -> int:
     rates = sub.add_parser("interest-rates", help="ejecuta TAMAR y BADLAR del BCRA")
     rates.add_argument("--root", type=Path, default=Path.cwd())
     for variable_id in (7, 35, 44, 45): rates.add_argument(f"--variable-{variable_id}-file", type=Path)
+    reserve_requirements = sub.add_parser("reserve-requirements", help="ejecuta la exigencia promedio de encajes del BCRA")
+    reserve_requirements.add_argument("--root", type=Path, default=Path.cwd())
+    reserve_requirements.add_argument("--source-file", type=Path, help="archivo din1_ser local")
     intervention = sub.add_parser("fx-intervention", help="ejecuta intervención cambiaria diaria del BCRA")
     intervention.add_argument("--root", type=Path, default=Path.cwd())
     intervention.add_argument("--source-file", type=Path)
@@ -92,10 +96,12 @@ def main(argv: list[str] | None = None) -> int:
     debt = sub.add_parser("consolidated-debt", help="ejecuta deuda neta consolidada estimada")
     debt.add_argument("--root", type=Path, default=Path.cwd())
     debt.add_argument("--source-file", type=Path, help="informe PDF local")
-    public_debt = sub.add_parser("public-debt", help="ejecuta deuda del Tesoro y pasivos remunerados del BCRA")
+    public_debt = sub.add_parser("public-debt", help="ejecuta deuda del Tesoro y tres medidas de pasivos del BCRA")
     public_debt.add_argument("--root", type=Path, default=Path.cwd())
     public_debt.add_argument("--treasury-file", type=Path, help="XLSX mensual local")
     public_debt.add_argument("--quarterly-file", type=Path, help="XLSX trimestral con indicadores de sostenibilidad")
+    public_debt.add_argument("--daily-liabilities-file", type=Path, help="planilla diaria diar_bas.xls local")
+    public_debt.add_argument("--weekly-balance-file", type=Path, help="balance semanal resumido local")
     for variable_id in BCRA_VARIABLES: public_debt.add_argument(f"--variable-{variable_id}-file", type=Path)
     reserves = sub.add_parser("reserves", help="ejecuta reservas internacionales brutas del BCRA")
     reserves.add_argument("--root", type=Path, default=Path.cwd())
@@ -154,6 +160,8 @@ def main(argv: list[str] | None = None) -> int:
         elif args.command == "interest-rates":
             files = {i: getattr(args, f"variable_{i}_file") for i in (7, 35, 44, 45)}
             result = run_interest_rates(args.root.resolve(), files)
+        elif args.command == "reserve-requirements":
+            result = run_reserve_requirements(args.root.resolve(), args.source_file)
         elif args.command == "fx-intervention":
             result = run_fx_intervention(args.root.resolve(), args.source_file, args.futures_dir)
         elif args.command == "profit-dividends":
@@ -168,7 +176,10 @@ def main(argv: list[str] | None = None) -> int:
             result = run_consolidated_debt(args.root.resolve(), args.source_file)
         elif args.command == "public-debt":
             files = {i: getattr(args, f"variable_{i}_file") for i in BCRA_VARIABLES}
-            result = run_public_debt(args.root.resolve(), args.treasury_file, files, args.quarterly_file)
+            result = run_public_debt(
+                args.root.resolve(), args.treasury_file, files, args.quarterly_file,
+                args.daily_liabilities_file, args.weekly_balance_file,
+            )
         elif args.command == "reserves":
             result = run_reserves(args.root.resolve(), args.source_file)
         elif args.command == "net-reserves":

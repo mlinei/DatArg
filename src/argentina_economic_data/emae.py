@@ -40,6 +40,8 @@ SECTORS = {
     "TAX": "taxes_net_subsidies",
 }
 
+SECTOR_REBASE_PERIOD = "2020-01"
+
 
 def _period_rows(sheet: pd.DataFrame, start: int) -> list[tuple[int, str]]:
     year: int | None = None
@@ -76,6 +78,12 @@ def _check_change(current: Decimal, previous: Decimal, official: Decimal, contex
     calculated = (current / previous - 1) * 100
     if abs(calculated - official) > Decimal("0.0001"):
         raise PipelineError(f"EMAE: variación inconsistente en {context}")
+
+
+def _rebase_index(value: Decimal, base: Decimal) -> Decimal:
+    if value <= 0 or base <= 0:
+        raise PipelineError("EMAE sectorial: no se puede rebasar un índice no positivo")
+    return value / base * Decimal("100")
 
 
 def extract_general(artifact: Artifact) -> list[dict[str, str]]:
@@ -163,14 +171,31 @@ def extract_sectors(artifact: Artifact) -> list[dict[str, str]]:
         raise PipelineError("EMAE sectorial: inicio de cobertura inesperado")
     index_values: dict[tuple[str, str], Decimal] = {}
     result: list[dict[str, str]] = []
+    index_rows = {period: row for row, period in index_periods}
+    if SECTOR_REBASE_PERIOD not in index_rows:
+        raise PipelineError(f"EMAE sectorial: falta el período base {SECTOR_REBASE_PERIOD}")
     for column, code in enumerate(index_headers, 2):
         series_id = f"indec_emae_sector_{SECTORS[code]}_index"
+        base = _number(
+            indexes.iat[index_rows[SECTOR_REBASE_PERIOD], column],
+            f"{series_id}/{SECTOR_REBASE_PERIOD}",
+        )
+        if base <= 0:
+            raise PipelineError(f"EMAE sectorial: base no positiva en {series_id}/{SECTOR_REBASE_PERIOD}")
         for row, period in index_periods:
             value = _number(indexes.iat[row, column], f"{series_id}/{period}")
             if value <= 0:
                 raise PipelineError(f"EMAE sectorial: índice no positivo en {series_id}/{period}")
             index_values[(code, period)] = value
             result.append(_record(series_id, period, value, "index_2004_100", artifact))
+            result.append(_record(
+                f"indec_emae_sector_{SECTORS[code]}_index_jan_2020_100",
+                period,
+                _rebase_index(value, base),
+                "index_jan_2020_100",
+                artifact,
+                "calculated",
+            ))
     for column, code in enumerate(index_headers, 2):
         series_id = f"indec_emae_sector_{SECTORS[code]}_yoy"
         for row, period in change_periods:
@@ -233,4 +258,3 @@ def run(root: Path, general_file: Path | None = None, sector_file: Path | None =
     general = acquire("indec_emae_general", EMAE_GENERAL_URL, raw, general_file)
     sectors = acquire("indec_emae_sector", EMAE_SECTOR_URL, raw, sector_file)
     return promote(extract_general(general) + extract_sectors(sectors), root, run_id)
-

@@ -4,7 +4,9 @@ import unittest
 
 import pandas as pd
 
-from argentina_economic_data.emae import PipelineError, _period_rows, _sector_headers
+from decimal import Decimal
+
+from argentina_economic_data.emae import PipelineError, _period_rows, _rebase_index, _sector_headers
 
 
 class EmaeContractTests(unittest.TestCase):
@@ -22,6 +24,14 @@ class EmaeContractTests(unittest.TestCase):
         sheet = pd.DataFrame([[None] * 18 for _ in range(3)])
         sheet.iloc[2, 2:] = headers
         self.assertEqual(_sector_headers(sheet), list("ABCDEFGHIJKLMNO") + ["TAX"])
+
+    def test_sector_index_is_rebased_to_100(self):
+        self.assertEqual(_rebase_index(Decimal("150"), Decimal("120")), Decimal("125"))
+        self.assertEqual(_rebase_index(Decimal("120"), Decimal("120")), Decimal("100"))
+
+    def test_sector_index_rejects_non_positive_base(self):
+        with self.assertRaisesRegex(PipelineError, "no positivo"):
+            _rebase_index(Decimal("120"), Decimal("0"))
 
 
 if __name__ == "__main__":
