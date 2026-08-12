@@ -123,6 +123,23 @@
       "methodology_notes": "Fallback and cross-check for API v4."
     },
     {
+      "source_id": "bcra_private_nonfinancial_fx_deposits",
+      "organization": "BCRA",
+      "module": "financial_system",
+      "series": ["private_nonfinancial_fx_deposits"],
+      "landing_url": "https://www.bcra.gob.ar/apis-banco-central/",
+      "resource_url": "https://api.bcra.gob.ar/estadisticas/v4.0/Monetarias/108",
+      "format": "json_api",
+      "frequency": ["daily_source", "monthly_output"],
+      "available_from": "2002-12",
+      "latest_at_research": "latest_available",
+      "unit": "million_usd",
+      "automation_type": "automatic",
+      "revision_history": "La observación diaria oficial puede ser revisada por el BCRA.",
+      "break_risks": ["API version change", "variable identifier change", "historical revision"],
+      "methodology_notes": "Variable monetaria 108 del BCRA. DatArg conserva el último saldo diario disponible de cada mes calendario, incluido el mes corriente. Es un stock y no una suma de flujos."
+    },
+    {
       "source_id": "bcra_daily_government_deposits",
       "organization": "BCRA",
       "module": "treasury_liquidity",

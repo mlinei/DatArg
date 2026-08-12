@@ -15,16 +15,19 @@
     "markets.csv",
     "net_reserves.csv",
     "poverty.csv",
+    "private_fx_deposits.csv",
     "profit_dividends.csv",
     "public_debt.csv",
     "public_investment.csv",
     "real_exchange_rate.csv",
+    "reserve_requirements.csv",
     "reserves.csv",
     "trade.csv",
+    "treasury_liquidity.csv",
     "treasury_maturities.csv",
     "usd_inflation.csv",
     "wages.csv",
     "yield_curves.csv"
   ],
-  "generatedAt": "2026-08-04T23:16:43.240Z"
+  "generatedAt": "2026-08-12T04:36:25.763Z"
 }

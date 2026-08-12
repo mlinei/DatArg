@@ -31,6 +31,7 @@ from .usd_inflation import run as run_usd_inflation
 from .profit_dividends import run as run_profit_dividends
 from .treasury_liquidity import run as run_treasury_liquidity
 from .reserve_requirements import run as run_reserve_requirements
+from .private_fx_deposits import run as run_private_fx_deposits
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -106,6 +107,9 @@ def main(argv: list[str] | None = None) -> int:
     reserves = sub.add_parser("reserves", help="ejecuta reservas internacionales brutas del BCRA")
     reserves.add_argument("--root", type=Path, default=Path.cwd())
     reserves.add_argument("--source-file", type=Path)
+    private_fx_deposits = sub.add_parser("private-fx-deposits", help="ejecuta depósitos privados en dólares del BCRA")
+    private_fx_deposits.add_argument("--root", type=Path, default=Path.cwd())
+    private_fx_deposits.add_argument("--source-file", type=Path)
     net_reserves = sub.add_parser("net-reserves", help="reconstruye reservas internacionales netas")
     net_reserves.add_argument("--root", type=Path, default=Path.cwd())
     net_reserves.add_argument("--weekly-file", type=Path)
@@ -182,6 +186,8 @@ def main(argv: list[str] | None = None) -> int:
             )
         elif args.command == "reserves":
             result = run_reserves(args.root.resolve(), args.source_file)
+        elif args.command == "private-fx-deposits":
+            result = run_private_fx_deposits(args.root.resolve(), args.source_file)
         elif args.command == "net-reserves":
             result = run_net_reserves(args.root.resolve(), args.weekly_file, args.flow_file, args.cny_file, args.usd_file)
         elif args.command == "wages":

@@ -126,6 +126,10 @@ export const sections = [
     ]
   },
   {
+    id: 'depositos-dolares', eyebrow: 'SISTEMA FINANCIERO', title: 'Depósitos privados en dólares', intro: 'Saldo de los depósitos en moneda extranjera del sector privado no financiero en el sistema bancario.', file: 'private_fx_deposits.csv',
+    charts: [{ title: 'Depósitos privados en dólares', subtitle: 'Saldo al cierre de cada mes; millones de dólares', unit: 'USD M', defaultRange: '10Y', series: { bcra_private_nonfinancial_fx_deposits: 'Depósitos privados' }}]
+  },
+  {
     id: 'dolar', eyebrow: 'MERCADO CAMBIARIO', title: 'Tipos de cambio', intro: 'Cotizaciones históricas de venta del dólar oficial, blue, MEP y contado con liquidación.', file: 'exchange_rates.csv',
     charts: [{ title: 'Dólar por mercado', subtitle: 'Pesos argentinos por dólar', unit: 'ARS/USD', defaultRange: '5Y', series: { argentinadatos_usd_official_retail_sell: 'Oficial', argentinadatos_usd_blue_sell: 'Blue', argentinadatos_usd_mep_sell: 'MEP', argentinadatos_usd_ccl_sell: 'CCL' }}]
   },

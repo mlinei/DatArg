@@ -15,6 +15,7 @@
     "markets.csv",
     "net_reserves.csv",
     "poverty.csv",
+    "private_fx_deposits.csv",
     "profit_dividends.csv",
     "public_debt.csv",
     "public_investment.csv",
@@ -28,5 +29,5 @@
     "wages.csv",
     "yield_curves.csv"
   ],
-  "generatedAt": "2026-08-12T00:16:34.792Z"
+  "generatedAt": "2026-08-12T04:36:25.763Z"
 }
