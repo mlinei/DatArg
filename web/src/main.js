@@ -283,15 +283,27 @@ function renderChart(container, rows, chart) {
 
 function sectionHTML(section){return `<section id="${section.id}" class="data-section"><header class="section-title"><span>${section.eyebrow}</span><h2>${section.title}</h2><p>${section.intro}</p>${section.warning?`<aside>${section.warning}</aside>`:''}</header><div class="charts">${section.charts.map(()=>'<article class="chart-card loading">Cargando datos…</article>').join('')}</div></section>`}
 
+const categories = [
+  { id:'economia-real', eyebrow:'ACTIVIDAD Y BIENESTAR', title:'Economía real', description:'Precios, actividad, producción, empleo, ingresos y condiciones de vida.', sectionIds:['precios','actividad','pbi','consumo-privado','industria','trabajo','salarios','pobreza'] },
+  { id:'bcra-finanzas', eyebrow:'MONEDA Y CRÉDITO', title:'BCRA y sistema financiero', description:'Reservas, intervención, depósitos, tasas, encajes y crédito bancario.', sectionIds:['reservas','reservas-netas','depositos-dolares','intervencion','tasas','credito'] },
+  { id:'sector-externo-mercados', eyebrow:'DÓLAR Y ACTIVOS', title:'Sector externo y mercados', description:'Comercio exterior, tipo de cambio, competitividad y mercados financieros.', sectionIds:['comercio','dolar','itcrm','mercados','riesgo','dividendos'] },
+  { id:'fiscal-deuda', eyebrow:'ESTADO Y FINANCIAMIENTO', title:'Fiscal y deuda', description:'Recaudación, resultado fiscal, inversión pública, liquidez, deuda y vencimientos.', sectionIds:['fiscal','inversion-publica','liquidez-tesoro','deuda','vencimientos','deuda-neta'] },
+];
+const sectionById = new Map(sections.map(section=>[section.id,section]));
+const categoryById = new Map(categories.map(category=>[category.id,category]));
+const categoryForSection = new Map(categories.flatMap(category=>category.sectionIds.map(id=>[id,category])));
+const categorySections = category=>category.sectionIds.map(id=>sectionById.get(id)).filter(Boolean);
+const homeHTML = ()=>`<section id="inicio" class="hero home-hero"><div class="hero-grid"></div><div class="hero-copy"><p class="kicker">UN MAPA ABIERTO DE LA ECONOMÍA ARGENTINA</p><h1>Los datos detrás<br>de <em>la economía.</em></h1><p class="lead">Una lectura integrada, trazable y actualizada de los principales indicadores del país.</p><div class="home-search"><label for="home-graph-search">Encontrá un indicador</label><input id="home-graph-search" type="search" placeholder="Ej.: riesgo país, inflación, reservas…" autocomplete="off" spellcheck="false"><div class="home-search-results" hidden></div></div></div></section>
+<section class="category-overview" aria-labelledby="category-overview-title"><header><span>EXPLORAR POR ÁREA</span><h2 id="category-overview-title">Cuatro entradas.<br>Una misma economía.</h2><p>Elegí un área para ver sus indicadores o usá el buscador para llegar directamente a una serie.</p></header><div class="category-grid">${categories.map(category=>`<a class="category-card" href="#categoria/${category.id}"><span>${category.eyebrow}</span><h3>${category.title}</h3><p>${category.description}</p><small>${category.sectionIds.length} indicadores <b>→</b></small></a>`).join('')}</div></section>`;
+const categoryHTML = category=>`<section class="category-hero"><a href="#inicio">← Todas las áreas</a><span>${category.eyebrow}</span><h1>${category.title}</h1><p>${category.description}</p><nav aria-label="Indicadores de ${category.title}">${categorySections(category).map(section=>`<a href="#${section.id}">${section.title}</a>`).join('')}</nav></section>${categorySections(category).map(sectionHTML).join('')}`;
+
 document.querySelector('#app').innerHTML=`<header class="topbar"><a class="brand" href="#inicio" aria-label="DatArg — volver al inicio"><span class="brand-logo"><img src="/datarg-logo.png" alt="DatArg"></span></a><div class="graph-picker"><button type="button" aria-expanded="false" aria-controls="graph-menu">Seleccionar gráfico <span>⌄</span></button><nav id="graph-menu" aria-label="Indicadores"><label class="graph-search"><span>Buscar gráfico</span><input type="search" placeholder="Escribí para filtrar…" autocomplete="off" spellcheck="false"></label>${sections.map(s=>`<a href="#${s.id}">${s.title}</a>`).join('')}<p class="graph-search-empty" hidden>Sin coincidencias</p></nav></div><div class="live"><i></i>Datos públicos</div></header>
-<main><section id="inicio" class="hero"><div class="hero-grid"></div><div class="hero-copy"><p class="kicker">UN MAPA ABIERTO DE LA ECONOMÍA ARGENTINA</p><h1>Los datos detrás<br>de <em>la economía.</em></h1><p class="lead">Una lectura integrada, trazable y actualizada de los principales indicadores del país.</p><div class="hero-actions"><a href="#precios">Explorar indicadores ↓</a><span><b>${sections.length}</b> áreas temáticas</span><span><b>50k+</b> observaciones</span></div></div></section>
-<section class="manifesto"><span>UNA SOLA PÁGINA</span><p>De la inflación al empleo, del dólar a la producción: desplazate para entender cómo se conectan las distintas dimensiones de la economía argentina.</p></section>
-${sections.map(sectionHTML).join('')}</main><footer><div class="brand"><span class="brand-logo"><img src="/datarg-logo.png" alt="DatArg"></span></div><p>Datos públicos, metodología visible y fuentes trazables.</p><div class="footer-actions"><button id="notification-toggle" type="button" aria-pressed="false" hidden>Activar alertas</button><button id="install-app" type="button" hidden>Instalar DatArg ↓</button><a class="contact-link" href="mailto:maximiliano.lineiro@gmail.com">Contacto · maximiliano.lineiro@gmail.com</a><a href="/privacidad.html" target="_blank" rel="noreferrer">Privacidad</a><a href="#inicio">Volver arriba ↑</a></div></footer>`;
+<main id="route-view"></main><footer><div class="brand"><span class="brand-logo"><img src="/datarg-logo.png" alt="DatArg"></span></div><p>Datos públicos, metodología visible y fuentes trazables.</p><div class="footer-actions"><button id="notification-toggle" type="button" aria-pressed="false" hidden>Activar alertas</button><button id="install-app" type="button" hidden>Instalar DatArg ↓</button><a class="contact-link" href="mailto:maximiliano.lineiro@gmail.com">Contacto · maximiliano.lineiro@gmail.com</a><a href="/privacidad.html" target="_blank" rel="noreferrer">Privacidad</a><a href="#inicio">Volver al inicio ↑</a></div></footer>`;
 
 const sectionLoads=new WeakMap();
-const loadSection=sectionElement=>{if(sectionLoads.has(sectionElement))return sectionLoads.get(sectionElement);const section=sections.find(item=>item.id===sectionElement.id);if(!section)return Promise.resolve();sectionElement.dataset.loaded='loading';const cards=[...sectionElement.querySelectorAll('.chart-card')];const pending=Promise.all(cards.map(async(card,index)=>{const chart=section.charts[index];try{const rows=await loadDataset(chart.file||section.file);card.classList.remove('loading');const renderer=chart.renderer||section.renderer;if(renderer==='maturities')renderMaturityChart(card,rows,chart);else if(renderer==='yield-curves')renderYieldCurves(card,rows,chart);else renderChart(card,rows,chart)}catch(error){console.error(error);card.classList.remove('loading');card.innerHTML='<p class="empty">No se pudo cargar este conjunto de datos.</p>'}})).finally(()=>{sectionElement.dataset.loaded='1';observer.unobserve(sectionElement)});sectionLoads.set(sectionElement,pending);return pending};
-const observer=new IntersectionObserver(entries=>entries.forEach(entry=>{if(entry.isIntersecting)void loadSection(entry.target)}),{rootMargin:'400px'});
-document.querySelectorAll('.data-section').forEach(s=>observer.observe(s));
+let observer;
+let activeObserver;
+const loadSection=sectionElement=>{if(sectionLoads.has(sectionElement))return sectionLoads.get(sectionElement);const section=sectionById.get(sectionElement.id);if(!section)return Promise.resolve();sectionElement.dataset.loaded='loading';const cards=[...sectionElement.querySelectorAll('.chart-card')];const pending=Promise.all(cards.map(async(card,index)=>{const chart=section.charts[index];try{const rows=await loadDataset(chart.file||section.file);card.classList.remove('loading');const renderer=chart.renderer||section.renderer;if(renderer==='maturities')renderMaturityChart(card,rows,chart);else if(renderer==='yield-curves')renderYieldCurves(card,rows,chart);else renderChart(card,rows,chart)}catch(error){console.error(error);card.classList.remove('loading');card.innerHTML='<p class="empty">No se pudo cargar este conjunto de datos.</p>'}})).finally(()=>{sectionElement.dataset.loaded='1';observer?.unobserve(sectionElement)});sectionLoads.set(sectionElement,pending);return pending};
 const picker=document.querySelector('.graph-picker'),pickerButton=picker.querySelector('button'),navLinks=[...picker.querySelectorAll('nav a')];
 const graphSearch=picker.querySelector('.graph-search input'),graphSearchEmpty=picker.querySelector('.graph-search-empty');
 const normalizeSearch=value=>value.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLocaleLowerCase('es-AR').trim();
@@ -301,10 +313,29 @@ const closePicker=()=>{picker.classList.remove('open');pickerButton.setAttribute
 pickerButton.onclick=()=>{const open=picker.classList.toggle('open');pickerButton.setAttribute('aria-expanded',String(open));if(open)requestAnimationFrame(()=>graphSearch.focus());else resetGraphSearch()};
 graphSearch.oninput=filterGraphs;
 graphSearch.onkeydown=event=>{if(event.key==='Enter'){const first=navLinks.find(link=>!link.hidden);if(first){event.preventDefault();first.click()}}};
-const scrollToGraph=async(event,link)=>{event.preventDefault();const target=document.querySelector(link.hash);if(!target)return;closePicker();const previous=target.previousElementSibling?.classList.contains('data-section')?target.previousElementSibling:null;await Promise.all([previous?loadSection(previous):Promise.resolve(),loadSection(target)]);history.pushState(null,'',link.hash);requestAnimationFrame(()=>requestAnimationFrame(()=>target.scrollIntoView({behavior:'smooth',block:'start'})))};
-navLinks.forEach(link=>link.onclick=event=>void scrollToGraph(event,link));
+navLinks.forEach(link=>link.onclick=()=>{closePicker();if(location.hash===link.hash)void renderRoute()});
 document.addEventListener('click',event=>{if(!picker.contains(event.target))closePicker()});
 document.addEventListener('keydown',event=>{if(event.key==='Escape'){closePicker();pickerButton.focus()}});
-const activeObserver=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){navLinks.forEach(a=>a.classList.toggle('active',a.hash===`#${e.target.id}`))}}),{threshold:.25});document.querySelectorAll('.data-section').forEach(s=>activeObserver.observe(s));
+const routeView=document.querySelector('#route-view');
+const setupHomeSearch=()=>{const input=document.querySelector('#home-graph-search'),results=document.querySelector('.home-search-results');if(!input||!results)return;const draw=()=>{const query=normalizeSearch(input.value);const matches=query?sections.filter(section=>normalizeSearch(`${section.title} ${section.eyebrow} ${section.intro}`).includes(query)).slice(0,8):[];results.innerHTML=matches.map(section=>`<a href="#${section.id}"><span>${categoryForSection.get(section.id)?.title||''}</span><strong>${section.title}</strong></a>`).join('')||'<p>Sin coincidencias</p>';results.hidden=!query};input.oninput=draw;input.onfocus=draw;input.onblur=()=>setTimeout(()=>{results.hidden=true},150);input.onkeydown=event=>{if(event.key==='Enter'){const first=results.querySelector('a');if(first){event.preventDefault();first.click()}}}};
+async function renderRoute(){
+  observer?.disconnect();activeObserver?.disconnect();
+  const hash=decodeURIComponent(location.hash.slice(1));
+  const section=sectionById.get(hash);
+  const category=section?categoryForSection.get(section.id):(hash.startsWith('categoria/')?categoryById.get(hash.slice(10)):null);
+  routeView.innerHTML=category?categoryHTML(category):homeHTML();
+  document.body.classList.toggle('category-route',Boolean(category));
+  window.scrollTo({top:0,behavior:'auto'});
+  navLinks.forEach(link=>link.classList.toggle('active',Boolean(section)&&link.hash===`#${section.id}`));
+  if(!category){setupHomeSearch();return}
+  const renderedSections=[...routeView.querySelectorAll('.data-section')];
+  observer=new IntersectionObserver(entries=>entries.forEach(entry=>{if(entry.isIntersecting)void loadSection(entry.target)}),{rootMargin:'400px'});
+  renderedSections.forEach(element=>observer.observe(element));
+  activeObserver=new IntersectionObserver(entries=>entries.forEach(entry=>{if(entry.isIntersecting)navLinks.forEach(link=>link.classList.toggle('active',link.hash===`#${entry.target.id}`))}),{rootMargin:'-20% 0px -60%',threshold:0});
+  renderedSections.forEach(element=>activeObserver.observe(element));
+  if(section){const target=document.getElementById(section.id);await loadSection(target);requestAnimationFrame(()=>requestAnimationFrame(()=>target.scrollIntoView({behavior:'auto',block:'start'})))}
+}
+window.addEventListener('hashchange',()=>void renderRoute());
+void renderRoute();
 const { announce = () => {} } = setupPWA() || {};
 void setupNotifications({ announce });
