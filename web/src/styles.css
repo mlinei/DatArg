@@ -86,6 +86,8 @@ h1 em{font-family:Newsreader,serif;font-weight:500;color:var(--green)}
 .section-title aside{border-left:2px solid var(--yellow);padding:12px 18px;margin-top:20px;color:#cbbf91;font-size:13px;background:rgba(246,200,95,.04)}
 .charts{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,500px),1fr));gap:22px}
 .chart-card{background:linear-gradient(145deg,rgba(13,32,56,.96),rgba(7,20,38,.96));border:1px solid var(--line);padding:28px;min-height:520px;box-shadow:0 25px 80px rgba(0,0,0,.13)}
+.charts.single-chart{display:block}
+.charts.single-chart .chart-card{width:min(100%,1120px);min-height:0;margin-inline:auto;padding:24px}
 .chart-card.loading{display:grid;place-items:center;color:var(--muted);font:400 12px DM Mono}
 .chart-head{display:flex;justify-content:space-between;gap:20px;align-items:start}
 .chart-head h3{font-size:19px;margin:0 0 7px}
@@ -205,6 +207,7 @@ footer{flex-direction:column;align-items:start;gap:25px}
 .category-hero>p{font-size:15px}
 .category-hero nav{display:grid;grid-template-columns:1fr 1fr}
 .category-hero nav a{display:flex;align-items:center;min-height:48px}
+.charts.single-chart .chart-card{width:100%;min-height:460px;margin-inline:0;padding:18px}
 }
 .series-toggle button{display:flex;align-items:center;gap:7px;background:rgba(89,167,255,.08);color:var(--text);border:1px solid #285276;padding:7px 9px;font:400 10px DM Mono;cursor:pointer;transition:.18s}
 .series-toggle button.muted{opacity:.42;background:transparent}

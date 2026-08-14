@@ -281,7 +281,7 @@ function renderChart(container, rows, chart) {
   svg.onpointerleave=()=>{tip.style.opacity=cross.style.opacity=dot.style.opacity=0};}
 }
 
-function sectionHTML(section){return `<section id="${section.id}" class="data-section"><header class="section-title"><span>${section.eyebrow}</span><h2>${section.title}</h2><p>${section.intro}</p>${section.warning?`<aside>${section.warning}</aside>`:''}</header><div class="charts">${section.charts.map(()=>'<article class="chart-card loading">Cargando datos…</article>').join('')}</div></section>`}
+function sectionHTML(section){return `<section id="${section.id}" class="data-section"><header class="section-title"><span>${section.eyebrow}</span><h2>${section.title}</h2><p>${section.intro}</p>${section.warning?`<aside>${section.warning}</aside>`:''}</header><div class="charts${section.charts.length===1?' single-chart':''}">${section.charts.map(()=>'<article class="chart-card loading">Cargando datos…</article>').join('')}</div></section>`}
 
 const categories = [
   { id:'economia-real', eyebrow:'ACTIVIDAD Y BIENESTAR', title:'Economía real', description:'Precios, actividad, producción, empleo, ingresos y condiciones de vida.', sectionIds:['precios','actividad','pbi','consumo-privado','industria','trabajo','salarios','pobreza'] },
