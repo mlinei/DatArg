@@ -135,10 +135,6 @@ svg text{fill:#7892a8;font:500 22px DM Mono}
 .chart-foot{display:flex;justify-content:space-between;align-items:center;gap:12px}
 .legend{display:flex;gap:15px;flex-wrap:wrap}
 .legend span{display:flex;align-items:center;gap:6px;color:var(--muted);font-size:10px}
-.ranges{display:flex;border:1px solid var(--line)}
-.ranges button{border:0;border-right:1px solid var(--line);background:transparent;color:var(--muted);padding:7px 9px;font:400 9px DM Mono;cursor:pointer}
-.ranges button:last-child{border:0}
-.ranges button.active{background:var(--green);color:#06101f}
 .empty{color:var(--muted);font:400 12px DM Mono}
 footer{padding:60px 7vw;display:flex;justify-content:space-between;align-items:center;color:var(--muted);font-size:12px}
 footer .brand-logo{width:102px;height:71px}
@@ -182,8 +178,6 @@ footer{flex-direction:column;align-items:start;gap:25px}
 .hero-actions span{display:none}
 .chart-card{border-left:0;border-right:0;margin-left:-5vw;margin-right:-5vw}
 .latest-row strong{font-size:15px}
-.ranges{width:100%}
-.ranges button{flex:1}
 .topbar{padding:0 5vw}
 .topbar .brand{min-width:0;flex:0 0 78px;margin-right:12px}
 .topbar .brand-logo{width:78px;height:54px}
