@@ -1,5 +1,6 @@
 import './styles.css';
 import { sections, COLORS } from './config.js';
+import { AREAS, areaForSection } from './areas.js';
 import { loadDataset } from './data-client.js';
 import { setupPWA } from './pwa.js';
 import { setupNotifications } from './notifications.js';
@@ -16,8 +17,10 @@ function human(value, unit) {
 }
 function sourceName(row) {
   const id = row?.source_id || '';
+  if (id === 'anses_fgs_and_datarg_ccl') return 'ANSES + CCL de DatArg';
   if (id.startsWith('datarg_bcra_credit_')) return 'DatArg sobre BCRA e INDEC';
   if (id.startsWith('indec_')) return 'INDEC';
+  if (id.startsWith('trabajo_')) return 'Secretaría de Trabajo / SIPA (ARCA)';
   if (id.startsWith('bcra_')) return 'BCRA';
   if (id.startsWith('datarg_bcra_')) return 'DatArg sobre fuentes BCRA, FMI y BCE';
   if (id.startsWith('datarg_mecon_')) return 'DatArg sobre Ministerio de Economía e INDEC';
@@ -242,7 +245,7 @@ function renderChart(container, rows, chart) {
     : latest.map(s=>{const list=points.filter(p=>p.series_id===s.id).sort((a,b)=>a.date-b.date);return `<path class="series-line" stroke="${s.color}" d="${list.map((p,i)=>`${i?'L':'M'}${x(p.date).toFixed(1)},${y(p.value).toFixed(1)}`).join(' ')}"/>`;}).join('');
   const titleControls = chart.composite ? `<div class="chart-selectors"><label>Vista<select class="metric-select">${Object.entries(chart.composite.metrics).map(([k,v])=>`<option value="${k}" ${compositeState.metric===k?'selected':''}>${v}</option>`).join('')}</select></label><label>${chart.composite.dimensionLabel || 'Rama'}<select class="sector-select">${Object.entries(chart.composite.sectors).map(([k,v])=>`<option value="${k}" ${compositeState.sector===k?'selected':''}>${v}</option>`).join('')}</select></label></div>` : chart.metricToggle ? `<div class="chart-selectors"><label>Vista<select class="toggle-metric-select">${Object.entries(chart.metricToggle.labels).map(([k,v])=>`<option value="${k}" ${toggleMetric===k?'selected':''}>${v}</option>`).join('')}</select></label></div>` : chart.selector ? `<select class="chart-select">${Object.entries(chart.selector).map(([k,v])=>`<option value="${k}" ${(state.get(chart)||chart.selected)===k?'selected':''}>${v}</option>`).join('')}</select>` : chart.regionSelector ? `<select class="chart-select">${Object.entries(chart.regionSelector).map(([k,v])=>`<option value="${k}" ${(state.get(chart)||chart.region)===k?'selected':''}>${v}</option>`).join('')}</select>`:'';
   const viewControls = `<div class="view-toggle" role="group" aria-label="Formato de visualización"><button type="button" data-view="chart" class="${viewMode==='chart'?'active':''}" aria-pressed="${viewMode==='chart'}">Gráfico</button><button type="button" data-view="table" class="${viewMode==='table'?'active':''}" aria-pressed="${viewMode==='table'}">Tabla</button></div>`;
-  const sources = chart.sources || [...new Map(allSelectedPoints.map(row => [sourceName(row), {label:sourceName(row),url:row.source_url}])).values()].filter(row=>row.url);
+  const sources = [...new Map(allSelectedPoints.map(row => [sourceName(row), row])).values()].filter(row=>row.source_url);
   const firstCoverage = coverageDates[0], lastCoverage = coverageDates.at(-1);
   const activeFrom = container.dataset.from ? Number(container.dataset.from) : (points[0]?.date ?? firstCoverage);
   const activeTo = container.dataset.to ? Number(container.dataset.to) : (points.at(-1)?.date ?? lastCoverage);
@@ -255,11 +258,12 @@ function renderChart(container, rows, chart) {
       <text x="${L}" y="${H-15}">${new Date(minX).getUTCFullYear()}</text><text x="${W-R}" y="${H-15}" text-anchor="end">${new Date(maxX).getUTCFullYear()}</text>
     </svg><div class="tooltip"></div></div>`;
   container.innerHTML=`<div class="chart-head"><div><h3>${chart.title}</h3><p>${chart.subtitle}</p></div><div class="chart-actions">${titleControls}${viewControls}</div></div>
+    ${chart.explanation?`<p class="chart-explanation">${chart.explanation}</p>`:''}
     <div class="latest-row">${latest.map(s=>`<div><i style="background:${s.color}"></i><span>${s.label}</span><strong>${human(s.row.value,displayUnit)}</strong><small>${s.row.period}</small></div>`).join('')}</div>
     ${visualContent}
     <div class="chart-foot"><div class="legend series-toggle">${Object.entries(availableSeries).map(([id,label],i)=>`<button class="${visible.has(id)?'visible':'muted'}" data-series="${id}"><i style="background:${COLORS[i]}"></i><span>${label}</span><b>${visible.has(id)?'✓':'+'}</b></button>`).join('')}</div></div>
     <div class="range-segment"><div class="range-copy"><span>PERÍODO VISIBLE</span></div><div class="range-steppers"><div class="range-stepper"><span>Inicio</span><div><button type="button" data-range-step="from-prev" aria-label="Mover el inicio un período hacia atrás">‹</button><strong class="range-from-label">${periodLabel(coverageDates[fromIndex])}</strong><button type="button" data-range-step="from-next" aria-label="Mover el inicio un período hacia adelante">›</button></div></div><i>—</i><div class="range-stepper"><span>Final</span><div><button type="button" data-range-step="to-prev" aria-label="Mover el final un período hacia atrás">‹</button><strong class="range-to-label">${periodLabel(coverageDates[toIndex])}</strong><button type="button" data-range-step="to-next" aria-label="Mover el final un período hacia adelante">›</button></div></div></div><div class="dual-range"><div class="range-track"></div><div class="range-fill"></div><input class="range-from" type="range" min="0" max="${coverageDates.length-1}" value="${fromIndex}" aria-label="Inicio del período visible"><input class="range-to" type="range" min="0" max="${coverageDates.length-1}" value="${toIndex}" aria-label="Final del período visible"></div><div class="coverage-labels"><span>${periodLabel(firstCoverage)}</span><span>${periodLabel(lastCoverage)}</span></div></div>
-    <div class="source-citation"><span>Fuente${sources.length>1?'s':''}:</span>${sources.map(source=>`<a href="${source.url}" target="_blank" rel="noreferrer">${source.label} ↗</a>`).join('')}</div>`;
+    <div class="source-citation"><span>Fuente${sources.length>1?'s':''}:</span>${sources.map(row=>`<a href="${row.source_url}" target="_blank" rel="noreferrer">${sourceName(row)} ↗</a>`).join('')}</div>`;
   container.querySelectorAll('[data-view]').forEach(button=>button.onclick=()=>{container.dataset.view=button.dataset.view;delete container.dataset.tableLimit;renderChart(container,rows,chart)});
   const moreButton=container.querySelector('.table-more'); if(moreButton) moreButton.onclick=()=>{container.dataset.tableLimit=tableLimit+100;renderChart(container,rows,chart)};
   const downloadButton=container.querySelector('.table-download'); if(downloadButton) downloadButton.onclick=()=>downloadTableCSV(tableModel,chart.title);
@@ -280,28 +284,16 @@ function renderChart(container, rows, chart) {
   svg.onpointerleave=()=>{tip.style.opacity=cross.style.opacity=dot.style.opacity=0};}
 }
 
-function sectionHTML(section){return `<section id="${section.id}" class="data-section"><header class="section-title"><span>${section.eyebrow}</span><h2>${section.title}</h2><p>${section.intro}</p>${section.warning?`<aside>${section.warning}</aside>`:''}</header><div class="charts${section.charts.length===1?' single-chart':''}">${section.charts.map(()=>'<article class="chart-card loading">Cargando datos…</article>').join('')}</div></section>`}
-
-const categories = [
-  { id:'economia-real', eyebrow:'ACTIVIDAD Y BIENESTAR', title:'Economía real', description:'Precios, actividad, producción, empleo, ingresos y condiciones de vida.', sectionIds:['precios','actividad','pbi','consumo-privado','industria','trabajo','salarios','pobreza'] },
-  { id:'bcra-finanzas', eyebrow:'MONEDA Y CRÉDITO', title:'BCRA y sistema financiero', description:'Reservas, intervención, depósitos, tasas, encajes y crédito bancario.', sectionIds:['reservas','reservas-netas','depositos-dolares','intervencion','tasas','credito'] },
-  { id:'sector-externo-mercados', eyebrow:'DÓLAR Y ACTIVOS', title:'Sector externo y mercados', description:'Comercio exterior, tipo de cambio, competitividad y mercados financieros.', sectionIds:['comercio','dolar','itcrm','mercados','riesgo','dividendos'] },
-  { id:'fiscal-deuda', eyebrow:'ESTADO Y FINANCIAMIENTO', title:'Fiscal y deuda', description:'Recaudación, resultado fiscal, inversión pública, liquidez, deuda y vencimientos.', sectionIds:['fiscal','inversion-publica','liquidez-tesoro','deuda','vencimientos','deuda-neta'] },
-];
-const sectionById = new Map(sections.map(section=>[section.id,section]));
-const categoryById = new Map(categories.map(category=>[category.id,category]));
-const categoryForSection = new Map(categories.flatMap(category=>category.sectionIds.map(id=>[id,category])));
-const categorySections = category=>category.sectionIds.map(id=>sectionById.get(id)).filter(Boolean);
-const homeHTML = ()=>`<section id="inicio" class="category-overview" aria-labelledby="category-overview-title"><header><span>UN MAPA ABIERTO DE LA ECONOMÍA ARGENTINA</span><h2 id="category-overview-title">Los datos detrás<br>de <em>la economía.</em></h2><p>Una lectura integrada, trazable y actualizada de los principales indicadores del país.</p><div class="home-search"><label for="home-graph-search">Encontrá un indicador</label><input id="home-graph-search" type="search" placeholder="Ej.: riesgo país, inflación, reservas…" autocomplete="off" spellcheck="false"><div class="home-search-results" hidden></div></div></header><div class="category-grid">${categories.map(category=>`<a class="category-card" href="#categoria/${category.id}"><span>${category.eyebrow}</span><h3>${category.title}</h3><p>${category.description}</p></a>`).join('')}</div></section>`;
-const categoryHTML = category=>`<section class="category-hero"><a href="#inicio">← Todas las áreas</a><span>${category.eyebrow}</span><h1>${category.title}</h1><p>${category.description}</p><nav aria-label="Indicadores de ${category.title}">${categorySections(category).map(section=>`<a href="#${section.id}">${section.title}</a>`).join('')}</nav></section>${categorySections(category).map(sectionHTML).join('')}`;
+function sectionHTML(section){const single=section.charts.length===1;return `<section id="${section.id}" class="data-section${single?' single-chart-section':''}"><header class="section-title"><span>${section.eyebrow}</span><h2>${section.title}</h2><p>${section.intro}</p>${section.warning?`<aside>${section.warning}</aside>`:''}</header><div class="charts${single?' single-chart':''}">${section.charts.map(()=>'<article class="chart-card loading">Cargando datos…</article>').join('')}</div></section>`}
 
 document.querySelector('#app').innerHTML=`<header class="topbar"><a class="brand" href="#inicio" aria-label="DatArg — volver al inicio"><span class="brand-logo"><img src="/datarg-logo.png" alt="DatArg"></span></a><div class="graph-picker"><button type="button" aria-expanded="false" aria-controls="graph-menu">Seleccionar gráfico <span>⌄</span></button><nav id="graph-menu" aria-label="Indicadores"><label class="graph-search"><span>Buscar gráfico</span><input type="search" placeholder="Escribí para filtrar…" autocomplete="off" spellcheck="false"></label>${sections.map(s=>`<a href="#${s.id}">${s.title}</a>`).join('')}<p class="graph-search-empty" hidden>Sin coincidencias</p></nav></div><div class="live"><i></i>Datos públicos</div></header>
-<main id="route-view"></main><footer><div class="brand"><span class="brand-logo"><img src="/datarg-logo.png" alt="DatArg"></span></div><p>Datos públicos, metodología visible y fuentes trazables.</p><div class="footer-actions"><button id="notification-toggle" type="button" aria-pressed="false" hidden>Activar alertas</button><button id="install-app" type="button" hidden>Instalar DatArg ↓</button><a class="contact-link" href="mailto:maximiliano.lineiro@gmail.com">Contacto · maximiliano.lineiro@gmail.com</a><a href="/privacidad.html" target="_blank" rel="noreferrer">Privacidad</a><a href="#inicio">Volver al inicio ↑</a></div></footer>`;
+<main id="main-content" data-ui-version="sectioned-v1"></main><footer><div class="brand"><span class="brand-logo"><img src="/datarg-logo.png" alt="DatArg"></span></div><p>Datos públicos, metodología visible y fuentes trazables.</p><div class="footer-actions"><button id="notification-toggle" type="button" aria-pressed="false" hidden>Activar alertas</button><a class="contact-link" href="mailto:maximiliano.lineiro@gmail.com">Contacto · maximiliano.lineiro@gmail.com</a><a href="/privacidad.html" target="_blank" rel="noreferrer">Privacidad</a><a href="#inicio">Volver arriba ↑</a></div></footer>`;
 
+const main=document.querySelector('#main-content');
 const sectionLoads=new WeakMap();
-let observer;
-let activeObserver;
-const loadSection=sectionElement=>{if(sectionLoads.has(sectionElement))return sectionLoads.get(sectionElement);const section=sectionById.get(sectionElement.id);if(!section)return Promise.resolve();sectionElement.dataset.loaded='loading';const cards=[...sectionElement.querySelectorAll('.chart-card')];const pending=Promise.all(cards.map(async(card,index)=>{const chart=section.charts[index];try{const rows=await loadDataset(chart.file||section.file);card.classList.remove('loading');const renderer=chart.renderer||section.renderer;if(renderer==='maturities')renderMaturityChart(card,rows,chart);else if(renderer==='yield-curves')renderYieldCurves(card,rows,chart);else renderChart(card,rows,chart)}catch(error){console.error(error);card.classList.remove('loading');card.innerHTML='<p class="empty">No se pudo cargar este conjunto de datos.</p>'}})).finally(()=>{sectionElement.dataset.loaded='1';observer?.unobserve(sectionElement)});sectionLoads.set(sectionElement,pending);return pending};
+let observer=null;
+let activeObserver=null;
+const loadSection=sectionElement=>{if(sectionLoads.has(sectionElement))return sectionLoads.get(sectionElement);const section=sections.find(item=>item.id===sectionElement.id);if(!section)return Promise.resolve();sectionElement.dataset.loaded='loading';const cards=[...sectionElement.querySelectorAll('.chart-card')];const pending=Promise.all(cards.map(async(card,index)=>{const chart=section.charts[index];try{const rows=await loadDataset(chart.file||section.file);card.classList.remove('loading');const renderer=chart.renderer||section.renderer;if(renderer==='maturities')renderMaturityChart(card,rows,chart);else if(renderer==='yield-curves')renderYieldCurves(card,rows,chart);else renderChart(card,rows,chart)}catch(error){console.error(error);card.classList.remove('loading');card.innerHTML='<p class="empty">No se pudo cargar este conjunto de datos.</p>'}})).finally(()=>{sectionElement.dataset.loaded='1';observer?.unobserve(sectionElement)});sectionLoads.set(sectionElement,pending);return pending};
 const picker=document.querySelector('.graph-picker'),pickerButton=picker.querySelector('button'),navLinks=[...picker.querySelectorAll('nav a')];
 const graphSearch=picker.querySelector('.graph-search input'),graphSearchEmpty=picker.querySelector('.graph-search-empty');
 const normalizeSearch=value=>value.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLocaleLowerCase('es-AR').trim();
@@ -311,29 +303,21 @@ const closePicker=()=>{picker.classList.remove('open');pickerButton.setAttribute
 pickerButton.onclick=()=>{const open=picker.classList.toggle('open');pickerButton.setAttribute('aria-expanded',String(open));if(open)requestAnimationFrame(()=>graphSearch.focus());else resetGraphSearch()};
 graphSearch.oninput=filterGraphs;
 graphSearch.onkeydown=event=>{if(event.key==='Enter'){const first=navLinks.find(link=>!link.hidden);if(first){event.preventDefault();first.click()}}};
-navLinks.forEach(link=>link.onclick=()=>{closePicker();if(location.hash===link.hash)void renderRoute()});
+const homeHTML=()=>`<section id="inicio" class="home-view"><div class="home-intro"><p class="kicker">UN MAPA ABIERTO DE LA ECONOMÍA ARGENTINA</p><h1>Los datos detrás de <em>la economía.</em></h1><p class="lead">Una lectura integrada, trazable y actualizada de los principales indicadores del país.</p><label class="home-search"><span>Encontrá un indicador</span><input type="search" placeholder="Ej.: riesgo país, inflación, reservas…" autocomplete="off"><div class="home-results" hidden></div></label></div><div><p class="kicker">EXPLORAR POR ÁREA</p><div class="area-grid">${AREAS.map(area=>`<a class="area-card" href="#area-${area.id}"><span>${area.eyebrow}</span><h2>${area.title}</h2><p>${area.description}</p><b aria-hidden="true">→</b></a>`).join('')}</div></div></section>`;
+const areaHTML=area=>{const areaSections=area.sections.map(id=>sections.find(section=>section.id===id)).filter(Boolean);return `<section class="area-hero"><div><a class="area-back" href="#inicio">← Todas las áreas</a><span>${area.eyebrow}</span><h1>${area.title}</h1><p>${area.description}</p><nav class="area-pills">${areaSections.map(section=>`<a href="#${section.id}">${section.title}</a>`).join('')}</nav></div></section>${areaSections.map(sectionHTML).join('')}`};
+const setActiveLink=id=>navLinks.forEach(link=>link.classList.toggle('active',link.hash===`#${id}`));
+const initializeSections=()=>{observer?.disconnect();activeObserver?.disconnect();observer=new IntersectionObserver(entries=>entries.forEach(entry=>{if(entry.isIntersecting)void loadSection(entry.target)}),{rootMargin:'400px'});document.querySelectorAll('.data-section').forEach(section=>observer.observe(section));activeObserver=new IntersectionObserver(entries=>entries.forEach(entry=>{if(entry.isIntersecting)setActiveLink(entry.target.id)}),{threshold:.25});document.querySelectorAll('.data-section').forEach(section=>activeObserver.observe(section))};
+const initializeHomeSearch=()=>{const input=main.querySelector('.home-search input'),results=main.querySelector('.home-results');if(!input)return;const update=()=>{const query=normalizeSearch(input.value);const matches=query?sections.filter(section=>normalizeSearch(section.title).includes(query)).slice(0,7):[];results.hidden=!query;results.innerHTML=matches.length?matches.map(section=>`<a href="#${section.id}">${section.title}</a>`).join(''):'<p>Sin coincidencias</p>'};input.oninput=update;input.onkeydown=event=>{if(event.key==='Enter'){const first=results.querySelector('a');if(first){event.preventDefault();first.click()}}}};
+const renderHome=()=>{observer?.disconnect();activeObserver?.disconnect();setActiveLink('');main.innerHTML=homeHTML();initializeHomeSearch();window.scrollTo({top:0,behavior:'auto'})};
+const renderArea=area=>{main.innerHTML=areaHTML(area);initializeSections()};
+const navigateTo=async(hash,{replace=false,smooth=true}={})=>{const id=(hash||'#inicio').slice(1);closePicker();if(id==='inicio'||!id){if(replace)history.replaceState(null,'','#inicio');else if(location.hash!=='#inicio')history.pushState(null,'','#inicio');renderHome();return}const explicitArea=id.startsWith('area-')?AREAS.find(area=>`area-${area.id}`===id):null;const area=explicitArea||areaForSection(id);if(!area){renderHome();return}if(replace)history.replaceState(null,'',`#${id}`);else if(location.hash!==`#${id}`)history.pushState(null,'',`#${id}`);renderArea(area);if(explicitArea){window.scrollTo({top:0,behavior:'auto'});return}const target=document.getElementById(id);if(!target)return;await loadSection(target);requestAnimationFrame(()=>requestAnimationFrame(()=>target.scrollIntoView({behavior:smooth?'smooth':'auto',block:'start'})))};
+const scrollToGraph=(event,link)=>{event.preventDefault();void navigateTo(link.hash)};
+navLinks.forEach(link=>link.onclick=event=>scrollToGraph(event,link));
 document.addEventListener('click',event=>{if(!picker.contains(event.target))closePicker()});
 document.addEventListener('keydown',event=>{if(event.key==='Escape'){closePicker();pickerButton.focus()}});
-const routeView=document.querySelector('#route-view');
-const setupHomeSearch=()=>{const input=document.querySelector('#home-graph-search'),results=document.querySelector('.home-search-results');if(!input||!results)return;const draw=()=>{const query=normalizeSearch(input.value);const matches=query?sections.filter(section=>normalizeSearch(`${section.title} ${section.eyebrow} ${section.intro}`).includes(query)).slice(0,8):[];results.innerHTML=matches.map(section=>`<a href="#${section.id}"><span>${categoryForSection.get(section.id)?.title||''}</span><strong>${section.title}</strong></a>`).join('')||'<p>Sin coincidencias</p>';results.hidden=!query};input.oninput=draw;input.onfocus=draw;input.onblur=()=>setTimeout(()=>{results.hidden=true},150);input.onkeydown=event=>{if(event.key==='Enter'){const first=results.querySelector('a');if(first){event.preventDefault();first.click()}}}};
-async function renderRoute(){
-  observer?.disconnect();activeObserver?.disconnect();
-  const hash=decodeURIComponent(location.hash.slice(1));
-  const section=sectionById.get(hash);
-  const category=section?categoryForSection.get(section.id):(hash.startsWith('categoria/')?categoryById.get(hash.slice(10)):null);
-  routeView.innerHTML=category?categoryHTML(category):homeHTML();
-  document.body.classList.toggle('category-route',Boolean(category));
-  window.scrollTo({top:0,behavior:'auto'});
-  navLinks.forEach(link=>link.classList.toggle('active',Boolean(section)&&link.hash===`#${section.id}`));
-  if(!category){setupHomeSearch();return}
-  const renderedSections=[...routeView.querySelectorAll('.data-section')];
-  observer=new IntersectionObserver(entries=>entries.forEach(entry=>{if(entry.isIntersecting)void loadSection(entry.target)}),{rootMargin:'400px'});
-  renderedSections.forEach(element=>observer.observe(element));
-  activeObserver=new IntersectionObserver(entries=>entries.forEach(entry=>{if(entry.isIntersecting)navLinks.forEach(link=>link.classList.toggle('active',link.hash===`#${entry.target.id}`))}),{rootMargin:'-20% 0px -60%',threshold:0});
-  renderedSections.forEach(element=>activeObserver.observe(element));
-  if(section){const target=document.getElementById(section.id);await loadSection(target);requestAnimationFrame(()=>requestAnimationFrame(()=>target.scrollIntoView({behavior:'auto',block:'start'})))}
-}
-window.addEventListener('hashchange',()=>void renderRoute());
-void renderRoute();
+document.querySelector('.brand').onclick=event=>{event.preventDefault();void navigateTo('#inicio')};
+main.addEventListener('click',event=>{const link=event.target.closest('a[href^="#"]');if(link){event.preventDefault();void navigateTo(link.hash)}});
+window.addEventListener('popstate',()=>void navigateTo(location.hash,{replace:true,smooth:false}));
+void navigateTo(location.hash||'#inicio',{replace:true,smooth:false});
 const { announce = () => {} } = setupPWA() || {};
 void setupNotifications({ announce });

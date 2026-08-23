@@ -25,6 +25,28 @@ const wages = {
   total: 'Total', total_registered: 'Total registrado', private_registered: 'Privado registrado',
   public: 'Sector público', private_unregistered: 'Privado no registrado'
 };
+const registeredEmploymentSectors = {
+  agriculture: 'Agricultura', fishing: 'Pesca', mining: 'Minería', manufacturing: 'Industria',
+  utilities: 'Electricidad, gas y agua', construction: 'Construcción', commerce: 'Comercio',
+  hotels_restaurants: 'Hoteles y restaurantes', transport_communications: 'Transporte y comunicaciones',
+  finance: 'Intermediación financiera', business_services: 'Servicios empresariales', education: 'Enseñanza',
+  health: 'Salud', community_services: 'Servicios comunitarios', unspecified: 'Sin especificar', total: 'Total'
+};
+const registeredEmploymentProvinces = {
+  buenos_aires: 'Buenos Aires', caba: 'CABA', catamarca: 'Catamarca', chaco: 'Chaco', chubut: 'Chubut',
+  cordoba: 'Córdoba', corrientes: 'Corrientes', entre_rios: 'Entre Ríos', formosa: 'Formosa', jujuy: 'Jujuy',
+  la_pampa: 'La Pampa', la_rioja: 'La Rioja', mendoza: 'Mendoza', misiones: 'Misiones', neuquen: 'Neuquén',
+  rio_negro: 'Río Negro', salta: 'Salta', san_juan: 'San Juan', san_luis: 'San Luis', santa_cruz: 'Santa Cruz',
+  santa_fe: 'Santa Fe', santiago_del_estero: 'Santiago del Estero', tierra_del_fuego: 'Tierra del Fuego', tucuman: 'Tucumán'
+};
+const registeredEmploymentMetricToggle = (dimension, labels) => ({
+  default: 'level',
+  labels: { level: 'Puestos de trabajo', index: 'Índice ene-09=100', yoy: 'Variación interanual' },
+  units: { level: 'miles de personas', index: 'índice', yoy: '%' },
+  seriesByMetric: Object.fromEntries(['level', 'index', 'yoy'].map(metric => [metric,
+    Object.fromEntries(Object.entries(labels).map(([slug, label]) => [`trabajo_private_registered_${dimension}_${slug}_${metric}`, label]))
+  ]))
+});
 const publicInvestmentFunctions = {
   transport: 'Transporte', energy_mining: 'Energía y minería', water_sanitation: 'Agua y saneamiento',
   housing_urbanism: 'Vivienda y urbanismo', science_technology: 'Ciencia y técnica',
@@ -34,29 +56,48 @@ const capitalExpenditureFunctions = {
   energy: 'Energía', transport: 'Transporte', education: 'Educación',
   housing: 'Vivienda', water: 'Agua', other: 'Otros y fondos fiduciarios'
 };
+const publicSpendingCoverages = {
+  consolidated: 'Consolidado', national: 'Nacional', provincial: 'Provincial', municipal: 'Municipal'
+};
+const publicSpendingFinalities = {
+  state_operation: 'I. FUNCIONAMIENTO DEL ESTADO',
+  social_spending: 'II. GASTO PÚBLICO SOCIAL',
+  economic_services: 'III. GASTO PÚBLICO EN SERVICIOS ECONÓMICOS',
+  public_debt_services: 'IV. SERVICIOS DE LA DEUDA PÚBLICA'
+};
+const publicSpendingFunctions = {
+  general_administration: 'I.1. Administración general', justice: 'I.2. Justicia', defense_security: 'I.3. Defensa y seguridad',
+  education_culture_science_technology: 'II.1. Educación, cultura y ciencia y técnica', basic_education: 'II.1.1. Educación básica',
+  higher_university_education: 'II.1.2. Educación superior y universitaria', science_technology: 'II.1.3. Ciencia y técnica',
+  culture: 'II.1.4. Cultura', unspecified_education_culture: 'II.1.5. Educación y cultura sin discriminar', health: 'II.2. Salud',
+  public_health_care: 'II.2.1. Atención pública de la salud', health_insurance_care: 'II.2.2. Obras sociales - Atención de la salud',
+  inssjyp_health_care: 'II.2.3. INSSJyP - Atención de la salud', drinking_water_sewerage: 'II.3. Agua potable y alcantarillado',
+  housing_urbanism: 'II.4. Vivienda y urbanismo', social_promotion_assistance: 'II.5. Promoción y asistencia social',
+  public_social_promotion_assistance: 'II.5.1. Promoción y asistencia social pública',
+  health_insurance_social_benefits: 'II.5.2. Obras sociales - Prestaciones sociales',
+  inssjyp_social_benefits: 'II.5.3. INSSJyP - Prestaciones sociales', social_security: 'II.6. Previsión social', labor: 'II.7. Trabajo',
+  employment_programs_unemployment_insurance: 'II.7.1. Programas de empleo y seguro de desempleo',
+  family_allowances: 'II.7.2. Asignaciones familiares', other_urban_services: 'II.8. Otros servicios urbanos',
+  primary_production: 'III.1. Producción primaria', energy_fuel: 'III.2. Energía y combustible', industry: 'III.3. Industria',
+  services: 'III.4. Servicios', transport: 'III.4.1. Transporte', communications: 'III.4.2. Comunicaciones',
+  other_economic_services: 'III.5. Otros gastos en servicios económicos', holdout_interest: 'IV.1  Pago intereses Holdouts (estimado)'
+};
+const publicSpendingMetrics = Object.fromEntries(Object.entries(publicSpendingCoverages).flatMap(([coverage, label]) => [
+  [`${coverage}_gdp`, `${label} · % del PIB`], [`${coverage}_share`, `${label} · % del gasto total`]
+]));
+const publicSpendingUnits = Object.fromEntries(Object.keys(publicSpendingMetrics).map(key => [key, '%']));
+const publicSpendingFinalitySeries = Object.fromEntries(Object.keys(publicSpendingMetrics).map(metric => [metric,
+  Object.fromEntries(Object.entries(publicSpendingFinalities).map(([slug, label]) => [`mecon_public_spending_${metric}_${slug}`, label]))
+]));
 
 export const sections = [
   {
-    id: 'precios', eyebrow: 'PRECIOS', title: 'Inflación', intro: 'Evolución del IPC nacional, los precios mayoristas y el nivel general de precios convertido al dólar oficial.', file: 'inflation.csv',
-    warning: 'La inflación en dólares es un cálculo de DatArg: IPC general dividido por el promedio mensual del dólar oficial minorista de venta. Mide precios locales convertidos a esa cotización; no equivale a la inflación de Estados Unidos ni utiliza dólares financieros.',
+    id: 'precios', eyebrow: 'PRECIOS', title: 'Inflación', intro: 'Evolución del IPC nacional y los precios mayoristas publicados por INDEC.', file: 'inflation.csv',
     charts: [
       { title: 'Inflación mensual', subtitle: 'Variación porcentual contra el mes anterior', unit: '%', defaultRange: '5Y', series: {
         indec_ipc_general_mom: 'Nivel general', indec_ipc_core_mom: 'Núcleo', indec_ipc_regulated_mom: 'Regulados', indec_ipc_seasonal_mom: 'Estacionales', indec_ipim_general_mom: 'Mayorista'
       }},
-      { title: 'Inflación interanual', subtitle: 'Variación contra igual mes del año anterior', unit: '%', series: { indec_ipc_general_yoy: 'IPC general', indec_ipc_core_yoy: 'IPC núcleo' }},
-      { title: 'Inflación en dólares', subtitle: 'IPC general dividido por el promedio mensual del dólar oficial de venta', file: 'usd_inflation.csv', unit: 'índice', defaultRange: 'ALL', sources: [
-        { label: 'INDEC (IPC)', url: 'https://www.indec.gob.ar/indec/web/Nivel4-Tema-3-5-31' },
-        { label: 'ArgentinaDatos (dólar oficial)', url: 'https://api.argentinadatos.com/v1/cotizaciones/dolares/oficial' }
-      ], metricToggle: {
-        default: 'index',
-        labels: { index: 'Índice ene-24=100', mom: 'Variación mensual', yoy: 'Variación interanual' },
-        units: { index: 'índice', mom: '%', yoy: '%' },
-        seriesByMetric: {
-          index: { datarg_usd_inflation_index_jan_2024: 'Nivel de precios en dólares' },
-          mom: { datarg_usd_inflation_mom: 'Inflación mensual en dólares' },
-          yoy: { datarg_usd_inflation_yoy: 'Inflación interanual en dólares' }
-        }
-      }, series: { datarg_usd_inflation_index_jan_2024: 'Nivel de precios en dólares' } }
+      { title: 'Inflación interanual', subtitle: 'Variación contra igual mes del año anterior', unit: '%', series: { indec_ipc_general_yoy: 'IPC general', indec_ipc_core_yoy: 'IPC núcleo' }}
     ]
   },
   {
@@ -93,6 +134,16 @@ export const sections = [
   {
     id: 'trabajo', eyebrow: 'MERCADO LABORAL', title: 'Empleo y participación', intro: 'Tasas trimestrales de actividad, empleo y desocupación para 31 aglomerados urbanos.', file: 'labor.csv',
     charts: [{ title: 'Indicadores laborales', subtitle: 'Seleccioná total nacional o una región', unit: '%', regionSelector: regions, metrics: { activity: 'Actividad', employment: 'Empleo', unemployment: 'Desocupación' }, region: 'total_31_agglomerates' }]
+  },
+  {
+    id: 'empleo-sector', eyebrow: 'MERCADO LABORAL', title: 'Empleo registrado por sector', intro: 'Puestos de trabajo asalariados privados registrados, desestacionalizados y abiertos por rama de actividad.', file: 'registered_employment.csv',
+    warning: 'La serie cubre empleo asalariado privado registrado en el SIPA: no representa todo el empleo ni incluye trabajo no registrado, empleo público o trabajo independiente. Los últimos datos son provisorios y pueden revisarse.',
+    charts: [{ title: 'Puestos de trabajo por sector', subtitle: 'Nivel, índice comparable o variación contra igual mes del año anterior', unit: 'miles de personas', defaultVisibleByMetric: { level: ['trabajo_private_registered_sector_manufacturing_level', 'trabajo_private_registered_sector_construction_level', 'trabajo_private_registered_sector_commerce_level', 'trabajo_private_registered_sector_agriculture_level'], index: ['trabajo_private_registered_sector_manufacturing_index', 'trabajo_private_registered_sector_construction_index', 'trabajo_private_registered_sector_commerce_index', 'trabajo_private_registered_sector_agriculture_index'], yoy: ['trabajo_private_registered_sector_manufacturing_yoy', 'trabajo_private_registered_sector_construction_yoy', 'trabajo_private_registered_sector_commerce_yoy', 'trabajo_private_registered_sector_agriculture_yoy'] }, metricToggle: registeredEmploymentMetricToggle('sector', registeredEmploymentSectors), series: registeredEmploymentMetricToggle('sector', registeredEmploymentSectors).seriesByMetric.level }]
+  },
+  {
+    id: 'empleo-provincia', eyebrow: 'MERCADO LABORAL', title: 'Empleo registrado por provincia', intro: 'Puestos de trabajo asalariados privados registrados, desestacionalizados y abiertos por jurisdicción.', file: 'registered_employment.csv',
+    warning: 'La asignación geográfica corresponde a la localización declarada del puesto en el SIPA. La serie no incluye empleo privado no registrado, empleo público ni trabajo independiente; los últimos datos son provisorios.',
+    charts: [{ title: 'Puestos de trabajo por provincia', subtitle: 'Nivel, índice comparable o variación contra igual mes del año anterior', unit: 'miles de personas', defaultVisibleByMetric: { level: ['trabajo_private_registered_province_buenos_aires_level', 'trabajo_private_registered_province_caba_level', 'trabajo_private_registered_province_cordoba_level', 'trabajo_private_registered_province_santa_fe_level'], index: ['trabajo_private_registered_province_buenos_aires_index', 'trabajo_private_registered_province_caba_index', 'trabajo_private_registered_province_cordoba_index', 'trabajo_private_registered_province_santa_fe_index'], yoy: ['trabajo_private_registered_province_buenos_aires_yoy', 'trabajo_private_registered_province_caba_yoy', 'trabajo_private_registered_province_cordoba_yoy', 'trabajo_private_registered_province_santa_fe_yoy'] }, metricToggle: registeredEmploymentMetricToggle('province', registeredEmploymentProvinces), series: registeredEmploymentMetricToggle('province', registeredEmploymentProvinces).seriesByMetric.level }]
   },
   {
     id: 'salarios', eyebrow: 'INGRESOS', title: 'Salarios', intro: 'Evolución mensual del índice de salarios del INDEC para el total y sus segmentos oficiales.', file: 'wages.csv',
@@ -190,6 +241,14 @@ export const sections = [
     }, series: { bcra_profit_dividend_outflows_monthly: 'Giros mensuales' } }]
   },
   {
+    id: 'agregados-monetarios', eyebrow: 'MONEDA Y CRÉDITO', title: 'Dinero y agregados monetarios', intro: 'Base monetaria diaria, sus componentes y medidas progresivamente más amplias de dinero publicadas por el BCRA.', file: 'monetary_aggregates.csv',
+    warning: 'Los saldos mensuales son de fin de mes. M1, M2, M3 de residentes y M3 total amplían sucesivamente el conjunto de activos monetarios; por eso no deben sumarse entre sí. M3 total es la medida histórica más amplia y consistente del archivo oficial. No se la etiqueta como M4 ni se la empalma con la “Base Monetaria Amplia” usada como referencia operativa del régimen monetario desde 2024, porque son conceptos diferentes y no existe una serie histórica homogénea publicada con esa definición.',
+    charts: [
+      { title: 'Base monetaria y componentes', subtitle: 'Saldos diarios en millones de pesos', unit: 'M ARS', defaultVisible: ['bcra_monetary_base_daily'], series: { bcra_monetary_base_daily: 'Base monetaria', bcra_currency_circulation_daily: 'Circulación monetaria', bcra_currency_public_daily: 'Billetes y monedas en poder del público', bcra_cash_financial_institutions_daily: 'Efectivo en entidades financieras', bcra_bank_current_accounts_daily: 'Cuentas corrientes de entidades en el BCRA' } },
+      { title: 'Agregados monetarios', subtitle: 'Compará poder de compra, profundidad monetaria o saldos nominales', unit: 'índice', defaultVisibleByMetric: { real: ['bcra_monetary_base_monthly_real_index', 'bcra_m2_total_monthly_real_index', 'bcra_m3_total_monthly_real_index'], gdp: ['bcra_monetary_base_monthly_gdp_ratio', 'bcra_m2_total_monthly_gdp_ratio', 'bcra_m3_total_monthly_gdp_ratio'], nominal: ['bcra_monetary_base_monthly', 'bcra_m2_total_monthly', 'bcra_m3_total_monthly'] }, metricToggle: { default: 'real', labels: { real: 'Nivel real (dic-23=100)', gdp: 'Porcentaje del PIB', nominal: 'Saldo nominal' }, units: { real: 'índice', gdp: '%', nominal: 'M ARS' }, seriesByMetric: { real: { bcra_monetary_base_monthly_real_index: 'Base monetaria', bcra_m1_total_monthly_real_index: 'M1', bcra_m2_total_monthly_real_index: 'M2', bcra_m3_resident_monthly_real_index: 'M3 residentes', bcra_m3_total_monthly_real_index: 'M3 total' }, gdp: { bcra_monetary_base_monthly_gdp_ratio: 'Base monetaria', bcra_m1_total_monthly_gdp_ratio: 'M1', bcra_m2_total_monthly_gdp_ratio: 'M2', bcra_m3_resident_monthly_gdp_ratio: 'M3 residentes', bcra_m3_total_monthly_gdp_ratio: 'M3 total' }, nominal: { bcra_monetary_base_monthly: 'Base monetaria', bcra_m1_total_monthly: 'M1', bcra_m2_total_monthly: 'M2', bcra_m3_resident_monthly: 'M3 residentes', bcra_m3_total_monthly: 'M3 total' } } }, series: { bcra_monetary_base_monthly_real_index: 'Base monetaria', bcra_m2_total_monthly_real_index: 'M2', bcra_m3_total_monthly_real_index: 'M3 total' } }
+    ]
+  },
+  {
     id: 'tasas', eyebrow: 'SISTEMA FINANCIERO', title: 'Tasas de interés', intro: 'Tasas bancarias, exigencias de liquidez del BCRA y estructura temporal de rendimientos de la deuda en pesos.', file: 'interest_rates.csv',
     warning: 'La tasa de encajes es la exigencia normativa promedio ponderada sobre depósitos y otras obligaciones. No es una alícuota única para todos los depósitos ni el ratio contable de liquidez de cada banco: cambia con la composición por moneda, plazo e instrumento. Desde agosto de 2025 el BCRA restableció el cumplimiento diario de los requisitos de efectivo mínimo.',
     charts: [
@@ -200,9 +259,9 @@ export const sections = [
   },
   {
     id: 'credito', eyebrow: 'SISTEMA FINANCIERO', title: 'Crédito privado y sector público', intro: 'Préstamos de las entidades financieras al sector privado no financiero y exposición de los bancos al sector público.', file: 'credit.csv',
-    warning: 'El índice real deflacta los saldos de fin de mes con el IPC nacional y fija diciembre de 2019 = 100. La vista sobre PIB divide cada saldo por el PIB nominal anualizado de los últimos cuatro trimestres; si todavía no se publicó un trimestre nuevo, mantiene el último denominador disponible. Los préstamos en moneda extranjera están valuados en pesos al tipo de cambio de cada período, por lo que el índice real también puede reflejar cambios de valuación. La exposición pública ampliada excluye Letras y Notas del BCRA.',
+    warning: 'El índice real deflacta los saldos con el IPC nacional y fija diciembre de 2019 = 100. La vista sobre PIB divide los promedios mensuales de préstamos por el PIB nominal anualizado disponible; los puntos recientes publicados por el BCRA reemplazan el cálculo de DatArg. Los préstamos en moneda extranjera se convierten a pesos al tipo de cambio de cada período. La exposición pública ampliada excluye Letras y Notas del BCRA.',
     charts: [
-      { title: 'Crédito al sector privado no financiero', subtitle: 'Evolución real y profundidad respecto de la economía', unit: 'índice', metricToggle: { default: 'real_index', labels: { real_index: 'Nivel real (dic-19=100)', gdp_ratio: 'Porcentaje del PIB' }, units: { real_index: 'índice', gdp_ratio: '%' }, seriesByMetric: { real_index: { bcra_private_nonfinancial_credit_real_index: 'Sector privado' }, gdp_ratio: { bcra_private_nonfinancial_credit_gdp_ratio: 'Sector privado' } } }, series: { bcra_private_nonfinancial_credit_real_index: 'Sector privado' } },
+      { title: 'Crédito al sector privado no financiero', subtitle: 'Evolución real y profundidad respecto de la economía', explanation: 'La apertura por moneda usa los promedios mensuales del Informe Monetario Diario. El crédito en dólares se convierte a pesos antes de dividir por el PIB, por eso los componentes pueden sumarse para obtener el total. Los últimos puntos publicados por el BCRA se usan como control y prevalecen sobre la estimación de DatArg.', unit: 'índice', defaultVisibleByMetric: { real_index: ['bcra_private_nonfinancial_credit_real_index'], gdp_ratio: ['bcra_private_nonfinancial_credit_gdp_ratio'] }, metricToggle: { default: 'real_index', labels: { real_index: 'Nivel real (dic-19=100)', gdp_ratio: 'Porcentaje del PIB' }, units: { real_index: 'índice', gdp_ratio: '%' }, seriesByMetric: { real_index: { bcra_private_nonfinancial_credit_real_index: 'Total' }, gdp_ratio: { bcra_private_nonfinancial_credit_ars_gdp_ratio: 'En pesos', bcra_private_nonfinancial_credit_fx_ars_gdp_ratio: 'En moneda extranjera', bcra_private_nonfinancial_credit_gdp_ratio: 'Total' } } }, series: { bcra_private_nonfinancial_credit_real_index: 'Total' } },
       { title: 'Préstamos al sector público', subtitle: 'Gobiernos y empresas u otros entes públicos', unit: 'índice', metricToggle: { default: 'real_index', labels: { real_index: 'Nivel real (dic-19=100)', gdp_ratio: 'Porcentaje del PIB' }, units: { real_index: 'índice', gdp_ratio: '%' }, seriesByMetric: { real_index: { bcra_public_loans_total_real_index: 'Total sector público', bcra_public_loans_government_real_index: 'Gobiernos', bcra_public_loans_enterprises_real_index: 'Empresas y otros entes' }, gdp_ratio: { bcra_public_loans_total_gdp_ratio: 'Total sector público', bcra_public_loans_government_gdp_ratio: 'Gobiernos', bcra_public_loans_enterprises_gdp_ratio: 'Empresas y otros entes' } } }, series: { bcra_public_loans_total_real_index: 'Total sector público', bcra_public_loans_government_real_index: 'Gobiernos', bcra_public_loans_enterprises_real_index: 'Empresas y otros entes' } },
       { title: 'Exposición ampliada al sector público', subtitle: 'Préstamos más títulos públicos en poder de las entidades financieras', unit: 'índice', defaultVisibleByMetric: { real_index: ['bcra_public_exposure_total_real_index'], gdp_ratio: ['bcra_public_exposure_total_gdp_ratio'] }, metricToggle: { default: 'real_index', labels: { real_index: 'Nivel real (dic-19=100)', gdp_ratio: 'Porcentaje del PIB' }, units: { real_index: 'índice', gdp_ratio: '%' }, seriesByMetric: { real_index: { bcra_public_exposure_total_real_index: 'Exposición total', bcra_public_loans_total_real_index: 'Préstamos', bcra_public_exposure_securities_real_index: 'Títulos públicos' }, gdp_ratio: { bcra_public_exposure_total_gdp_ratio: 'Exposición total', bcra_public_loans_total_gdp_ratio: 'Préstamos', bcra_public_exposure_securities_gdp_ratio: 'Títulos públicos' } } }, series: { bcra_public_exposure_total_real_index: 'Exposición total', bcra_public_loans_total_real_index: 'Préstamos', bcra_public_exposure_securities_real_index: 'Títulos públicos' } }
     ]
@@ -216,6 +275,15 @@ export const sections = [
     ]
   },
   {
+    id: 'gasto-publico', eyebrow: 'FINANZAS PÚBLICAS', title: 'Gasto público consolidado', intro: 'Evolución anual del gasto público del Sector Público No Financiero, con apertura por nivel de gobierno, finalidad y función.', file: 'public_spending.csv',
+    warning: 'La serie oficial está medida por devengado y consolida Nación, provincias y municipios para evitar duplicar transferencias entre niveles de gobierno. La participación en el gasto total es un cálculo de DatArg a partir de los porcentajes del PIB publicados. El último año disponible es provisorio.',
+    charts: [
+      { title: 'GASTO PÚBLICO TOTAL', subtitle: 'Comparación por nivel de gobierno; porcentaje del PIB', unit: '%', metricToggle: { default: 'consolidated', labels: publicSpendingCoverages, units: Object.fromEntries(Object.keys(publicSpendingCoverages).map(key => [key, '%'])), seriesByMetric: Object.fromEntries(Object.entries(publicSpendingCoverages).map(([coverage, label]) => [coverage, { [`mecon_public_spending_${coverage}_gdp_total`]: label }])) }, series: { mecon_public_spending_consolidated_gdp_total: 'Consolidado' } },
+      { title: 'Composición por finalidad', subtitle: 'Clasificación funcional oficial en porcentaje del PIB o del gasto total', unit: '%', metricToggle: { default: 'consolidated_gdp', labels: publicSpendingMetrics, units: publicSpendingUnits, seriesByMetric: publicSpendingFinalitySeries }, series: publicSpendingFinalitySeries.consolidated_gdp },
+      { title: 'Apertura por función', subtitle: 'Elegí una función oficial, la cobertura y la medida', unit: '%', composite: { sectors: publicSpendingFunctions, metrics: publicSpendingMetrics, units: publicSpendingUnits, seriesPattern: 'mecon_public_spending_{metric}_{sector}', dimensionLabel: 'Función', defaultSector: 'education_culture_science_technology', defaultMetric: 'consolidated_gdp' } }
+    ]
+  },
+  {
     id: 'inversion-publica', eyebrow: 'FINANZAS PÚBLICAS', title: 'Inversión pública', intro: 'Evolución anual de la inversión pública nacional y su composición funcional.', file: 'public_investment.csv',
     warning: 'La inversión pública corresponde a la Administración Pública Nacional y se mide por devengado. Los gastos de capital corresponden al Sector Público Nacional y se miden por base caja, por lo que ambas series no son idénticas. Se excluyen las proyecciones y créditos vigentes de 2026 para mostrar únicamente años ejecutados.',
     charts: [
@@ -223,6 +291,25 @@ export const sections = [
       { title: 'Componentes de la inversión pública', subtitle: 'Elegí una función y compará su nivel real o peso en el PIB', unit: 'índice', composite: { sectors: publicInvestmentFunctions, metrics: { real_index: 'Nivel real (2019=100)', gdp_ratio: 'Porcentaje del PIB' }, units: { real_index: 'índice', gdp_ratio: '%' }, seriesPattern: 'jgm_public_investment_function_{metric}_{sector}', dimensionLabel: 'Función', defaultSector: 'transport', defaultMetric: 'real_index' } },
       { title: 'Gastos de capital del SPN', subtitle: 'Ejecución base caja; nivel real con 2019=100 o porcentaje del PIB', unit: 'índice', metricToggle: { default: 'real_index', labels: { real_index: 'Nivel real (2019=100)', gdp_ratio: 'Porcentaje del PIB' }, units: { real_index: 'índice', gdp_ratio: '%' }, seriesByMetric: { real_index: { jgm_capital_expenditure_real_index: 'Gastos de capital' }, gdp_ratio: { jgm_capital_expenditure_gdp_ratio: 'Gastos de capital' } } }, series: { jgm_capital_expenditure_real_index: 'Gastos de capital' } },
       { title: 'Componentes del gasto de capital', subtitle: 'Apertura funcional disponible desde 2016', unit: 'índice', composite: { sectors: capitalExpenditureFunctions, metrics: { real_index: 'Nivel real (2019=100)', gdp_ratio: 'Porcentaje del PIB' }, units: { real_index: 'índice', gdp_ratio: '%' }, seriesPattern: 'jgm_capital_expenditure_function_{metric}_{sector}', dimensionLabel: 'Función', defaultSector: 'energy', defaultMetric: 'real_index' } }
+    ]
+  },
+  {
+    id: 'prevision-social', eyebrow: 'SEGURIDAD SOCIAL', title: 'Sistema previsional', intro: 'Gasto previsional, cobertura de las prestaciones contributivas con aportes corrientes y fuentes de financiamiento de ANSES.', file: 'pensions.csv',
+    warning: 'La cobertura sigue la metodología homogénea de la Oficina de Presupuesto del Congreso: aportes y contribuciones a la seguridad social divididos por prestaciones contributivas y semicontributivas, incluidas las moratorias. Excluye PUAM, pensiones no contributivas y otras prestaciones no contributivas. La participación de los aportes en los recursos de ANSES es otro indicador: mide la composición de sus ingresos y, siguiendo al Anuario Estadístico, excluye Rentas de la Propiedad. No debe interpretarse como el porcentaje del gasto jubilatorio cubierto.',
+    charts: [
+      { file: 'public_spending.csv', title: 'Gasto previsional', subtitle: 'Previsión social consolidada; porcentaje del PIB', explanation: 'Mide el peso del gasto previsional en la economía. No indica qué proporción se financia con aportes.', unit: '%', series: { mecon_public_spending_consolidated_gdp_social_security: 'Gasto previsional' } },
+      { title: 'Cobertura con aportes actuales', subtitle: 'Prestaciones contributivas y semicontributivas cubiertas por aportes y contribuciones', explanation: 'Compara aportes corrientes con jubilaciones contributivas y por moratoria. Incluye moratorias; excluye PUAM y otras prestaciones no contributivas.', unit: '%', series: { opc_contributory_semicontributory_coverage: 'Cobertura previsional' } },
+      { title: 'Aportes dentro de los recursos de ANSES', subtitle: 'Participación anual; excluye Rentas de la Propiedad', explanation: 'Muestra qué parte de los ingresos de ANSES proviene de aportes y contribuciones. No mide cuánto gasto jubilatorio cubren.', unit: '%', series: { anses_contributions_resource_share: 'Aportes y contribuciones' } },
+      { title: 'Recursos de ANSES', subtitle: 'Evolución anual de aportes e impuestos como porcentaje del PIB', explanation: 'Compara el tamaño de las dos fuentes principales de recursos respecto del PIB. Su perímetro contable difiere del indicador de cobertura.', unit: '%', series: { anses_contributions_gdp: 'Aportes y contribuciones', anses_tax_resources_gdp: 'Recursos tributarios' } },
+      { title: 'Cómo se financia ANSES', subtitle: 'Composición de los recursos totales en 2023', explanation: 'Es una foto del origen de todos los ingresos de ANSES en 2023; no asigna cada fuente a una prestación específica.', unit: '%', series: { anses_financing_contributions_share: 'Aportes y contribuciones', anses_financing_taxes_share: 'Impuestos', anses_financing_treasury_share: 'Tesoro y contribuciones figurativas', anses_financing_other_share: 'Otros' } }
+    ]
+  },
+  {
+    id: 'fgs', eyebrow: 'SEGURIDAD SOCIAL', title: 'Fondo de Garantía de Sustentabilidad', intro: 'Patrimonio y composición de la cartera del FGS valuados al dólar contado con liquidación de cada cierre anual.', file: 'fgs.csv',
+    warning: 'Cálculo de DatArg sobre los cierres nominales publicados por ANSES. Cada observación se convierte al CCL vendedor del último día disponible del año. La serie comienza en 2013 porque no se empalma el CCL con otros tipos de cambio. Las categorías se normalizan para mantener comparabilidad pese a cambios de clasificación entre informes.',
+    charts: [
+      { title: 'Patrimonio del FGS en CCL', subtitle: 'Cierres anuales; millones de USD al contado con liquidación', explanation: 'Valúa el patrimonio anual del fondo al dólar CCL de cada cierre. No representa recursos corrientes de ANSES ni cobertura anual de jubilaciones.', unit: 'USD M', series: { datarg_fgs_total_ccl_usd: 'Patrimonio total' } },
+      { title: 'Composición del FGS', subtitle: 'Apertura comparable por grandes clases de activos', explanation: 'Muestra en qué activos está invertido el patrimonio del fondo. Puede verse como monto en USD CCL o como participación dentro de la cartera.', unit: 'USD M', defaultVisibleByMetric: { usd: ['datarg_fgs_public_securities_ccl_usd', 'datarg_fgs_shares_ccl_usd', 'datarg_fgs_infrastructure_ccl_usd'], share: ['datarg_fgs_public_securities_share', 'datarg_fgs_shares_share', 'datarg_fgs_infrastructure_share'] }, metricToggle: { default: 'usd', labels: { usd: 'Millones de USD CCL', share: 'Porcentaje de la cartera' }, units: { usd: 'USD M', share: '%' }, seriesByMetric: { usd: { datarg_fgs_public_securities_ccl_usd: 'Títulos públicos nacionales', datarg_fgs_other_public_assets_ccl_usd: 'Otros activos públicos', datarg_fgs_shares_ccl_usd: 'Acciones', datarg_fgs_infrastructure_ccl_usd: 'Proyectos e infraestructura', datarg_fgs_loans_ccl_usd: 'Préstamos', datarg_fgs_private_fixed_income_liquidity_ccl_usd: 'Renta fija privada y liquidez', datarg_fgs_cash_other_ccl_usd: 'Disponibilidades y otros' }, share: { datarg_fgs_public_securities_share: 'Títulos públicos nacionales', datarg_fgs_other_public_assets_share: 'Otros activos públicos', datarg_fgs_shares_share: 'Acciones', datarg_fgs_infrastructure_share: 'Proyectos e infraestructura', datarg_fgs_loans_share: 'Préstamos', datarg_fgs_private_fixed_income_liquidity_share: 'Renta fija privada y liquidez', datarg_fgs_cash_other_share: 'Disponibilidades y otros' } } }, series: { datarg_fgs_public_securities_ccl_usd: 'Títulos públicos nacionales', datarg_fgs_shares_ccl_usd: 'Acciones', datarg_fgs_infrastructure_ccl_usd: 'Proyectos e infraestructura' } }
     ]
   },
   {

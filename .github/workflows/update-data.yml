@@ -78,6 +78,7 @@ jobs:
           aed interest-rates
           aed yield-curves
           aed treasury-liquidity
+          aed monetary-aggregates
 
       - name: Actualizar inflación
         if: steps.frequency.outputs.scope == 'monthly' || steps.frequency.outputs.scope == 'all'
@@ -85,17 +86,17 @@ jobs:
           aed inflation
           aed gdp
           aed wages
+          aed registered-employment
           aed fiscal
           aed public-investment
+          aed public-spending
           aed credit
           aed debt-maturities
           aed profit-dividends
           aed public-debt
           aed reserve-requirements
-
-      - name: Recalcular inflación en dólares
-        if: steps.frequency.outputs.scope == 'monthly' || steps.frequency.outputs.scope == 'all'
-        run: aed usd-inflation
+          aed fgs
+          aed pensions
 
       - name: Validar pipelines
         run: |
@@ -113,7 +114,7 @@ jobs:
           fi
 
       - name: Actualizar la base de datos Turso
-        if: steps.changes.outputs.changed == 'true' || github.event_name == 'workflow_dispatch'
+        if: steps.changes.outputs.changed == 'true'
         env:
           TURSO_DATABASE_URL: ${{ secrets.TURSO_DATABASE_URL }}
           TURSO_AUTH_TOKEN: ${{ secrets.TURSO_AUTH_TOKEN }}

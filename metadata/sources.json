@@ -380,6 +380,23 @@
       "revision_history": "La planilla puede revisar años previos y agregar estimaciones o créditos vigentes del año en curso.",
       "break_risks": ["workbook layout change", "landing page link change", "functional classification change"],
       "methodology_notes": "La inversión pública de la APN se publica por devengado; el gasto de capital del SPN, por base caja. DatArg excluye años marcados como proyección."
+    },
+    {
+      "source_id": "mecon_public_spending_since_1980",
+      "organization": "Ministerio de Economía - Dirección Nacional de Política Macroeconómica",
+      "module": "public_spending",
+      "series": ["total", "finalities", "functions"],
+      "landing_url": "https://www.argentina.gob.ar/economia/politicaeconomica/macroeconomica/gastopublicoconsolidado",
+      "resource_url": "https://www.argentina.gob.ar/sites/default/files/gasto_publico_consolidado_desde_1980_2.xls",
+      "format": "xls",
+      "frequency": "annual",
+      "available_from": "1980",
+      "latest_at_research": "2024",
+      "unit": ["percent_gdp", "percent_total_spending"],
+      "automation_type": "automatic",
+      "revision_history": "La publicación puede revisar años previos y mantiene provisorio el último año.",
+      "break_risks": ["workbook layout change", "functional classification change", "resource URL change"],
+      "methodology_notes": "Gasto público no financiero devengado. El consolidado reúne Nación, provincias y municipios neteando transferencias intergubernamentales."
     }
   ]
 }

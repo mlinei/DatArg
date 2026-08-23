@@ -5,6 +5,7 @@
     "credit.csv",
     "emae.csv",
     "exchange_rates.csv",
+    "fgs.csv",
     "fiscal.csv",
     "fx_intervention.csv",
     "gdp.csv",
@@ -13,13 +14,17 @@
     "interest_rates.csv",
     "labor.csv",
     "markets.csv",
+    "monetary_aggregates.csv",
     "net_reserves.csv",
+    "pensions.csv",
     "poverty.csv",
     "private_fx_deposits.csv",
     "profit_dividends.csv",
     "public_debt.csv",
     "public_investment.csv",
+    "public_spending.csv",
     "real_exchange_rate.csv",
+    "registered_employment.csv",
     "reserve_requirements.csv",
     "reserves.csv",
     "trade.csv",
@@ -29,5 +34,5 @@
     "wages.csv",
     "yield_curves.csv"
   ],
-  "generatedAt": "2026-08-21T23:55:12.318Z"
+  "generatedAt": "2026-08-23T03:41:25.638Z"
 }

@@ -3,10 +3,6 @@ import { Capacitor, SystemBars, SystemBarsStyle } from '@capacitor/core';
 import { Network } from '@capacitor/network';
 import { StatusBar, Style } from '@capacitor/status-bar';
 
-function standalone() {
-  return Capacitor.isNativePlatform() || window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
-}
-
 function connectionBanner() {
   const banner = document.createElement('div');
   banner.className = 'connection-status';
@@ -24,9 +20,7 @@ function connectionBanner() {
 
 export function setupPWA() {
   const announce = connectionBanner();
-  const installButton = document.querySelector('#install-app');
   const nativeRuntime = Capacitor.isNativePlatform();
-  let installPrompt;
 
   const updateConnection = (connected = navigator.onLine) => {
     if (connected) announce('Conexión restablecida');
@@ -64,31 +58,6 @@ export function setupPWA() {
   if (!nativeRuntime && 'serviceWorker' in navigator && import.meta.env.PROD) {
     window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(() => {}));
   }
-
-  if (!installButton || standalone()) return { announce };
-  window.addEventListener('beforeinstallprompt', event => {
-    event.preventDefault();
-    installPrompt = event;
-    installButton.hidden = false;
-  });
-  window.addEventListener('appinstalled', () => {
-    installPrompt = null;
-    installButton.hidden = true;
-    announce('DatArg quedó instalada');
-  });
-
-  const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
-  if (isIOS) installButton.hidden = false;
-  installButton.addEventListener('click', async () => {
-    if (installPrompt) {
-      await installPrompt.prompt();
-      await installPrompt.userChoice;
-      installPrompt = null;
-      installButton.hidden = true;
-      return;
-    }
-    if (isIOS) announce('En iPhone: tocá Compartir y luego “Agregar a inicio”', true);
-  });
 
   return { announce };
 }

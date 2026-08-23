@@ -19,7 +19,6 @@ ECB_USD_URL = "https://data-api.ecb.europa.eu/service/data/EXR/D.USD.EUR.SP00.A?
 FLOW_URL = "https://api.bcra.gob.ar/estadisticas/v4.0/Monetarias/81?desde=2023-12-01&limit=3000"
 METHODOLOGY_URL = "https://www.bcra.gob.ar/normas-especiales-para-la-divulgacion-de-datos-fmi/"
 START = "2023-12-01"
-WEEKLY_MIN_BYTES = 1_000_000
 
 
 def _num(value: object) -> Decimal:
@@ -133,7 +132,7 @@ def promote(records: list[dict[str, str]], root: Path, run_id: str) -> dict[str,
 
 def run(root: Path, weekly_file: Path | None=None, flow_file: Path | None=None, cny_file: Path | None=None, usd_file: Path | None=None) -> dict[str, object]:
     run_id=datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ"); raw=root/"data"/"raw"
-    weekly=acquire("bcra_weekly_balance",WEEKLY_URL,raw,weekly_file,min_bytes=WEEKLY_MIN_BYTES); flow=acquire("bcra_reserve_requirement_flow",FLOW_URL,raw,flow_file); cny=acquire("ecb_cny_eur",ECB_CNY_URL,raw,cny_file); usd=acquire("ecb_usd_eur",ECB_USD_URL,raw,usd_file)
+    weekly=acquire("bcra_weekly_balance",WEEKLY_URL,raw,weekly_file); flow=acquire("bcra_reserve_requirement_flow",FLOW_URL,raw,flow_file); cny=acquire("ecb_cny_eur",ECB_CNY_URL,raw,cny_file); usd=acquire("ecb_usd_eur",ECB_USD_URL,raw,usd_file)
     gross={r["period"]:Decimal(r["value"]) for r in csv.DictReader((root/"data"/"processed"/"reserves.csv").open(encoding="utf-8"))}
     encajes,ooii=extract_weekly(weekly); repos,overrides=load_adjustments(root/"data"/"reference"/"net_reserves_adjustments.csv")
     return promote(calculate(gross,encajes,ooii,extract_flow(flow),extract_swap(cny,usd),repos,overrides,weekly),root,run_id)

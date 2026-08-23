@@ -7,31 +7,15 @@ const nativeRuntime = Capacitor.isNativePlatform();
 const configuredBase = import.meta.env.VITE_DATA_BASE_URL?.replace(/\/$/, '');
 const DATA_BASE = configuredBase || (nativeRuntime ? 'https://dat-arg.vercel.app/api/data' : '/api/data');
 const FALLBACK_DATA_BASE = nativeRuntime ? 'https://dat-arg.vercel.app/data' : '/data';
+// El indicador oficial de crédito/PIB puede cambiar de metodología cuando el
+// BCRA actualiza su informe mensual. El CSV generado por el pipeline es la
+// fuente canónica y no debe quedar oculto por una copia anterior en Turso.
+const CSV_FIRST_FILES = new Set(['credit.csv']);
 const REQUIRED_SERIES_BY_FILE = Object.freeze({
-  'emae.csv': [
-    'indec_emae_sector_manufacturing_index_jan_2020_100',
-    'indec_emae_sector_manufacturing_yoy',
-  ],
   'fx_intervention.csv': [
     'bcra_fx_futures_net_short_change',
     'bcra_fx_futures_net_short_position',
     'bcra_fx_intervention_adjusted_monthly',
-  ],
-  'gdp.csv': [
-    'indec_private_consumption_sa_constant_2004',
-    'indec_private_consumption_sa_qoq',
-    'indec_private_consumption_gdp_share_quarterly',
-  ],
-  'public_debt.csv': [
-    'bcra_interest_bearing_liabilities',
-    'bcra_broad_financial_liabilities',
-    'bcra_total_accounting_liabilities',
-  ],
-  'treasury_liquidity.csv': [
-    'bcra_treasury_deposits_ars_daily',
-    'bcra_treasury_deposits_ars_daily_change',
-    'bcra_treasury_deposits_usd_daily',
-    'bcra_treasury_deposits_usd_daily_change',
   ],
 });
 
@@ -97,9 +81,8 @@ async function download(file, base) {
   const response = await fetch(endpoint(file, base), { cache: 'no-store' });
   if (!response.ok) throw new Error(`${file}: HTTP ${response.status}`);
   const text = await response.text();
-  const supportedHeader = text.startsWith('series_id,')
-    || text.startsWith('snapshot_date,ticker,instrument_name,curve_type,');
-  if (!supportedHeader || text.trim().split(/\r?\n/).length < 2) {
+  const validHeader = text.startsWith('series_id,') || text.startsWith('snapshot_date,ticker,instrument_name,curve_type,');
+  if (!validHeader) {
     throw new Error(`${file}: contenido inválido`);
   }
   return text;
@@ -115,16 +98,17 @@ function containsRequiredSeries(file, text) {
 async function fetchText(file) {
   try {
     let text;
-    let source = 'database';
+    let source = CSV_FIRST_FILES.has(file) ? 'csv' : 'database';
     try {
-      text = await download(file, DATA_BASE);
+      text = await download(file, CSV_FIRST_FILES.has(file) ? FALLBACK_DATA_BASE : DATA_BASE);
       if (!containsRequiredSeries(file, text)) {
         throw new Error(`${file}: la base todavía no contiene todas las series requeridas`);
       }
-    } catch (databaseError) {
-      console.warn(`Turso no disponible para ${file}; se usa el respaldo CSV`, databaseError);
-      text = await download(file, FALLBACK_DATA_BASE);
-      source = 'csv-fallback';
+    } catch (primaryError) {
+      const secondaryBase = CSV_FIRST_FILES.has(file) ? DATA_BASE : FALLBACK_DATA_BASE;
+      console.warn(`Fuente principal no disponible para ${file}; se usa el respaldo`, primaryError);
+      text = await download(file, secondaryBase);
+      source = CSV_FIRST_FILES.has(file) ? 'database-fallback' : 'csv-fallback';
     }
     void store(file, text);
     window.dispatchEvent(new CustomEvent('datarg:data-source', { detail: { file, source } }));

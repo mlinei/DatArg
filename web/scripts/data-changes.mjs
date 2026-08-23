@@ -13,19 +13,21 @@ export const DATASETS = {
   'inflation.csv': { label: 'inflación', section: 'precios' },
   'interest_rates.csv': { label: 'tasas de interés', section: 'tasas' },
   'labor.csv': { label: 'mercado laboral', section: 'trabajo' },
+  'registered_employment.csv': { label: 'empleo privado registrado', section: 'empleo-sector' },
   'markets.csv': { label: 'S&P Merval en dólares', section: 'mercados' },
+  'monetary_aggregates.csv': { label: 'base y agregados monetarios', section: 'agregados-monetarios' },
   'net_reserves.csv': { label: 'reservas netas', section: 'reservas-netas' },
   'poverty.csv': { label: 'pobreza e indigencia', section: 'pobreza' },
   'private_fx_deposits.csv': { label: 'depósitos privados en dólares', section: 'depositos-dolares' },
   'profit_dividends.csv': { label: 'giros de utilidades y dividendos', section: 'dividendos' },
   'public_debt.csv': { label: 'deuda pública', section: 'deuda' },
   'public_investment.csv': { label: 'inversión pública', section: 'inversion-publica' },
+  'public_spending.csv': { label: 'gasto público consolidado', section: 'gasto-publico' },
   'reserve_requirements.csv': { label: 'encajes bancarios', section: 'tasas' },
   'treasury_maturities.csv': { label: 'vencimientos del Tesoro', section: 'vencimientos' },
   'treasury_liquidity.csv': { label: 'liquidez del Tesoro', section: 'liquidez-tesoro' },
   'reserves.csv': { label: 'reservas brutas', section: 'reservas' },
   'trade.csv': { label: 'comercio exterior', section: 'comercio' },
-  'usd_inflation.csv': { label: 'inflación en dólares', section: 'precios' },
   'wages.csv': { label: 'salarios', section: 'salarios' }
 };
 

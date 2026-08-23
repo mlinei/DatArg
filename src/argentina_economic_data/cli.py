@@ -27,11 +27,15 @@ from .fx_intervention import run as run_fx_intervention
 from .credit import run as run_credit
 from .debt_maturities import run as run_debt_maturities
 from .yield_curves import run as run_yield_curves
-from .usd_inflation import run as run_usd_inflation
 from .profit_dividends import run as run_profit_dividends
 from .treasury_liquidity import run as run_treasury_liquidity
 from .reserve_requirements import run as run_reserve_requirements
 from .private_fx_deposits import run as run_private_fx_deposits
+from .fgs import run as run_fgs
+from .monetary_aggregates import API_VARIABLES as MONETARY_VARIABLES, run as run_monetary_aggregates
+from .public_spending import SOURCES as PUBLIC_SPENDING_SOURCES, run as run_public_spending
+from .pensions import run as run_pensions
+from .registered_employment import run as run_registered_employment
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -58,6 +62,9 @@ def main(argv: list[str] | None = None) -> int:
     labor = sub.add_parser("labor", help="ejecuta tasas de actividad, empleo y desocupación")
     labor.add_argument("--root", type=Path, default=Path.cwd())
     labor.add_argument("--source-file", type=Path, help="libro histórico local")
+    registered_employment = sub.add_parser("registered-employment", help="ejecuta empleo privado registrado por sector y provincia")
+    registered_employment.add_argument("--root", type=Path, default=Path.cwd())
+    registered_employment.add_argument("--source-file", type=Path, help="libro estadístico de Trabajo local")
     industry = sub.add_parser("industry", help="ejecuta IPI manufacturero por división")
     industry.add_argument("--root", type=Path, default=Path.cwd())
     industry.add_argument("--source-file", type=Path, help="libro histórico local")
@@ -92,8 +99,10 @@ def main(argv: list[str] | None = None) -> int:
     credit = sub.add_parser("credit", help="ejecuta crédito privado y exposición al sector público")
     credit.add_argument("--root", type=Path, default=Path.cwd())
     credit.add_argument("--private-file", type=Path)
+    credit.add_argument("--private-currency-file", type=Path, help="planilla del Informe Monetario Diario")
     credit.add_argument("--public-file", type=Path)
     credit.add_argument("--securities-file", type=Path)
+    credit.add_argument("--indicators-file", type=Path, help="planilla del Informe Monetario Mensual")
     debt = sub.add_parser("consolidated-debt", help="ejecuta deuda neta consolidada estimada")
     debt.add_argument("--root", type=Path, default=Path.cwd())
     debt.add_argument("--source-file", type=Path, help="informe PDF local")
@@ -110,6 +119,10 @@ def main(argv: list[str] | None = None) -> int:
     private_fx_deposits = sub.add_parser("private-fx-deposits", help="ejecuta depósitos privados en dólares del BCRA")
     private_fx_deposits.add_argument("--root", type=Path, default=Path.cwd())
     private_fx_deposits.add_argument("--source-file", type=Path)
+    monetary = sub.add_parser("monetary-aggregates", help="ejecuta base y agregados monetarios del BCRA")
+    monetary.add_argument("--root", type=Path, default=Path.cwd())
+    monetary.add_argument("--history-file", type=Path, help="libro histórico panhis.xls local")
+    for variable_id in MONETARY_VARIABLES: monetary.add_argument(f"--variable-{variable_id}-file", type=Path)
     net_reserves = sub.add_parser("net-reserves", help="reconstruye reservas internacionales netas")
     net_reserves.add_argument("--root", type=Path, default=Path.cwd())
     net_reserves.add_argument("--weekly-file", type=Path)
@@ -130,14 +143,20 @@ def main(argv: list[str] | None = None) -> int:
     public_investment = sub.add_parser("public-investment", help="ejecuta inversión pública y gastos de capital")
     public_investment.add_argument("--root", type=Path, default=Path.cwd())
     public_investment.add_argument("--source-file", type=Path, help="planilla oficial local")
+    public_spending = sub.add_parser("public-spending", help="ejecuta gasto público consolidado por finalidad y función")
+    public_spending.add_argument("--root", type=Path, default=Path.cwd())
+    for coverage in PUBLIC_SPENDING_SOURCES:
+        public_spending.add_argument(f"--{coverage}-file", type=Path, help=f"planilla {coverage} local")
     maturities = sub.add_parser("debt-maturities", help="ejecuta el cronograma proyectado de vencimientos del Tesoro")
     maturities.add_argument("--root", type=Path, default=Path.cwd())
     maturities.add_argument("--source-file", type=Path, help="libro trimestral oficial local")
     yield_curves = sub.add_parser("yield-curves", help="calcula curvas nominal, CER y breakeven con fuentes públicas")
     yield_curves.add_argument("--root", type=Path, default=Path.cwd())
     yield_curves.add_argument("--source-file", type=Path, help="cierre normalizado alternativo con precios y flujos")
-    usd_inflation = sub.add_parser("usd-inflation", help="calcula inflación en dólares desde IPC y dólar oficial")
-    usd_inflation.add_argument("--root", type=Path, default=Path.cwd())
+    fgs = sub.add_parser("fgs", help="calcula patrimonio y composición histórica del FGS en USD CCL")
+    fgs.add_argument("--root", type=Path, default=Path.cwd())
+    pensions = sub.add_parser("pensions", help="ejecuta gasto, cobertura y financiamiento previsional")
+    pensions.add_argument("--root", type=Path, default=Path.cwd())
     args = parser.parse_args(argv)
     try:
         if args.command == "inflation":
@@ -152,6 +171,8 @@ def main(argv: list[str] | None = None) -> int:
             result = run_gdp(args.root.resolve(), args.original_file, args.sa_file)
         elif args.command == "labor":
             result = run_labor(args.root.resolve(), args.source_file)
+        elif args.command == "registered-employment":
+            result = run_registered_employment(args.root.resolve(), args.source_file)
         elif args.command == "industry":
             result = run_industry(args.root.resolve(), args.source_file)
         elif args.command == "exchange-rates":
@@ -175,7 +196,10 @@ def main(argv: list[str] | None = None) -> int:
                 args.root.resolve(), args.balance_file, args.valuation_fx_file, args.daily_balance_file,
             )
         elif args.command == "credit":
-            result = run_credit(args.root.resolve(), args.private_file, args.public_file, args.securities_file)
+            result = run_credit(
+                args.root.resolve(), args.private_file, args.private_currency_file, args.public_file,
+                args.securities_file, args.indicators_file,
+            )
         elif args.command == "consolidated-debt":
             result = run_consolidated_debt(args.root.resolve(), args.source_file)
         elif args.command == "public-debt":
@@ -188,6 +212,9 @@ def main(argv: list[str] | None = None) -> int:
             result = run_reserves(args.root.resolve(), args.source_file)
         elif args.command == "private-fx-deposits":
             result = run_private_fx_deposits(args.root.resolve(), args.source_file)
+        elif args.command == "monetary-aggregates":
+            files = {i: getattr(args, f"variable_{i}_file") for i in MONETARY_VARIABLES}
+            result = run_monetary_aggregates(args.root.resolve(), args.history_file, files)
         elif args.command == "net-reserves":
             result = run_net_reserves(args.root.resolve(), args.weekly_file, args.flow_file, args.cny_file, args.usd_file)
         elif args.command == "wages":
@@ -198,12 +225,17 @@ def main(argv: list[str] | None = None) -> int:
             result = run_fiscal(args.root.resolve(), args.tax_file, args.fiscal_file, args.refresh_history)
         elif args.command == "public-investment":
             result = run_public_investment(args.root.resolve(), args.source_file)
+        elif args.command == "public-spending":
+            files = {coverage: getattr(args, f"{coverage}_file") for coverage in PUBLIC_SPENDING_SOURCES}
+            result = run_public_spending(args.root.resolve(), files)
         elif args.command == "debt-maturities":
             result = run_debt_maturities(args.root.resolve(), args.source_file)
-        elif args.command == "yield-curves":
-            result = run_yield_curves(args.root.resolve(), args.source_file)
+        elif args.command == "fgs":
+            result = run_fgs(args.root.resolve())
+        elif args.command == "pensions":
+            result = run_pensions(args.root.resolve())
         else:
-            result = run_usd_inflation(args.root.resolve())
+            result = run_yield_curves(args.root.resolve(), args.source_file)
     except PipelineError as exc:
         parser.exit(1, f"error: {exc}\n")
     print(json.dumps(result, ensure_ascii=False, indent=2))

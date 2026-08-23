@@ -65,6 +65,14 @@ aed labor
 
 Importa las tasas trimestrales de actividad, empleo y desocupación de la EPH para el total de 31 aglomerados y seis regiones. La salida queda en `data/processed/labor.csv`.
 
+## Empleo privado registrado por sector y provincia
+
+```bash
+aed registered-employment
+```
+
+Importa la serie mensual desestacionalizada del SIPA para el empleo asalariado privado registrado por rama de actividad y por jurisdicción. Incluye nivel en miles de personas, índice enero de 2009=100 y variación interanual. La salida queda en `data/processed/registered_employment.csv`.
+
 ## Industria manufacturera
 
 ```bash
@@ -146,6 +154,14 @@ aed interest-rates
 
 Importa BADLAR y TAMAR de bancos privados, tanto TNA como TEA, desde la API v4 oficial del BCRA. La salida queda en `data/processed/interest_rates.csv`.
 
+## Base y agregados monetarios
+
+```bash
+aed monetary-aggregates
+```
+
+Importa diariamente la base monetaria y sus componentes desde la API v4 del BCRA, y mensualmente la base, M1, M2, M3 de residentes y M3 total desde el libro histórico oficial. Publica los saldos nominales en millones de pesos, índices reales con diciembre de 2023=100 y ratios sobre el PIB nominal anualizado. M3 total es el agregado histórico más amplio y homogéneo disponible; no se lo denomina M4 ni se empalma con la referencia operativa de “Base Monetaria Amplia”, porque responden a definiciones distintas. La salida queda en `data/processed/monetary_aggregates.csv`.
+
 ### Encajes bancarios
 
 ```bash
@@ -168,7 +184,7 @@ Calcula la TIR efectiva anual, la tasa efectiva mensual y la duración de LECAP/
 aed credit
 ```
 
-Importa del BCRA los préstamos al sector privado no financiero y los préstamos al sector público, separados entre gobiernos y empresas u otros entes públicos. También calcula una exposición pública ampliada que suma esos préstamos y los títulos de los gobiernos nacional, provinciales y municipales en poder de las entidades financieras, excluyendo Letras y Notas del BCRA. Conserva los niveles nominales para trazabilidad y publica dos vistas comparables: índice real deflactado por IPC con base diciembre de 2019 = 100 y saldo como porcentaje del PIB nominal anualizado de los últimos cuatro trimestres. La salida queda en `data/processed/credit.csv`.
+Importa del BCRA los préstamos al sector privado no financiero y los préstamos al sector público, separados entre gobiernos y empresas u otros entes públicos. También calcula una exposición pública ampliada que suma esos préstamos y los títulos de los gobiernos nacional, provinciales y municipales en poder de las entidades financieras, excluyendo Letras y Notas del BCRA. Para el crédito privado sobre PIB usa exclusivamente el indicador oficial del Informe Monetario Mensual: suma los préstamos en pesos y en moneda extranjera y respeta el denominador del BCRA (PIB desestacionalizado estimado, promedio móvil de tres meses). Las razones sobre PIB del sector público continúan siendo cálculos de DatArg con el PIB nominal anualizado de los últimos cuatro trimestres. La salida queda en `data/processed/credit.csv`.
 
 ## Recaudación y resultado fiscal
 
@@ -185,6 +201,14 @@ aed public-investment
 ```
 
 Importa las series anuales oficiales de inversión pública de la Administración Pública Nacional desde 1995 y de gastos de capital del Sector Público Nacional desde 1997. Publica el nivel real con base 2019=100, el porcentaje del PIB y la composición funcional disponible. Excluye las columnas proyectadas de 2026. La salida queda en `data/processed/public_investment.csv`.
+
+## Gasto público consolidado
+
+```bash
+aed public-spending
+```
+
+Importa las series oficiales anuales de gasto público desde 1980 para las coberturas consolidada, nacional, provincial y municipal. Conserva literalmente la clasificación funcional publicada por el Ministerio de Economía, muestra cada nivel como porcentaje del PIB y calcula su participación en el gasto total. El consolidado comprende los tres niveles de gobierno y evita duplicar las transferencias intergubernamentales. La salida queda en `data/processed/public_spending.csv`.
 
 ## Deuda neta consolidada
 
