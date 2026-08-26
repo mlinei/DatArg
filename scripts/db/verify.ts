@@ -12,6 +12,24 @@ const files = (await readdir(sourceDirectory)).filter(file => file.endsWith('.cs
 const { client, db } = createDatabase();
 let verifiedRows = 0;
 
+// SQLite stores numeric observations as IEEE-754 REAL values. libSQL can return
+// the same value with a slightly different decimal rendering, so strict
+// equality between the CSV string and the database round-trip is too brittle.
+// This tolerance is far below the precision of any published economic series,
+// while still detecting material changes.
+function numericValuesMatch(sourceValue: unknown, storedValue: unknown): boolean {
+  const source = Number(sourceValue);
+  const stored = Number(storedValue);
+  if (!Number.isFinite(source) || !Number.isFinite(stored)) return source === stored;
+  if (source === stored) return true;
+  const scale = Math.max(1, Math.abs(source), Math.abs(stored));
+  return Math.abs(source - stored) <= scale * 1e-12;
+}
+
+function mismatch(fileName: string, index: number, column: string, sourceValue: unknown, storedValue: unknown): Error {
+  return new Error(`${fileName}: diferencia en fila ${index + 2}, columna ${column} (CSV=${sourceValue}, Turso=${storedValue})`);
+}
+
 try {
   for (const fileName of files) {
     const sourceText = await readFile(resolve(sourceDirectory, fileName), 'utf8');
@@ -36,7 +54,11 @@ try {
       if (stored.length !== sourceRows.length) throw new Error(`${fileName}: cantidad de filas no coincide`);
       for (let index = 0; index < sourceRows.length; index += 1) for (const column of YIELD_CURVE_CSV_COLUMNS) {
         const numeric = ['days_to_maturity','price','annual_yield','monthly_yield','duration_years','volume'].includes(column);
-        if (numeric ? Number(sourceRows[index][column]) !== Number(stored[index][column]) : sourceRows[index][column] !== String(stored[index][column])) throw new Error(`${fileName}: diferencia en fila ${index + 2}, columna ${column}`);
+        const sourceValue = sourceRows[index][column];
+        const storedValue = stored[index][column];
+        if (numeric ? !numericValuesMatch(sourceValue, storedValue) : sourceValue !== String(storedValue)) {
+          throw mismatch(fileName, index, column, sourceValue, storedValue);
+        }
       }
       verifiedRows += stored.length;
       console.log(`${fileName}: verificado`);
@@ -79,9 +101,9 @@ try {
           const sourceValue = sourceRows[index][column];
           const storedValue = String(stored[index][column]);
           const matches = ['value', 'source_row'].includes(column)
-            ? Number(sourceValue) === Number(storedValue)
+            ? numericValuesMatch(sourceValue, storedValue)
             : sourceValue === storedValue;
-          if (!matches) throw new Error(`${fileName}: diferencia en fila ${index + 2}, columna ${column}`);
+          if (!matches) throw mismatch(fileName, index, column, sourceValue, storedValue);
         }
       }
       verifiedRows += stored.length;
@@ -122,10 +144,10 @@ try {
         const sourceValue = sourceRow[column];
         const storedValue = String(storedRow[column]);
         const matches = column === 'value'
-          ? Number(sourceValue) === Number(storedValue)
+          ? numericValuesMatch(sourceValue, storedValue)
           : sourceValue === storedValue;
         if (!matches) {
-          throw new Error(`${fileName}: diferencia en fila ${index + 2}, columna ${column}`);
+          throw mismatch(fileName, index, column, sourceValue, storedValue);
         }
       }
     }
