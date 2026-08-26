@@ -4,6 +4,7 @@ import pandas as pd
 import pytest
 
 from argentina_economic_data.inflation import Artifact, PipelineError
+import argentina_economic_data.registered_employment as registered_employment
 from argentina_economic_data.registered_employment import _sheet_records
 
 
@@ -32,3 +33,32 @@ def test_builds_level_index_and_interannual_change(tmp_path: Path):
 def test_rejects_a_missing_official_column(tmp_path: Path):
     with pytest.raises(PipelineError, match="columnas ausentes"):
         _sheet_records(sheet(), {"industria": ("manufacturing", "Industria")}, "sector", artifact(tmp_path))
+
+
+class Response:
+    def __init__(self, body: str):
+        self.body = body.encode()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *_):
+        return None
+
+    def read(self):
+        return self.body
+
+
+def test_source_url_ignores_invalid_blank_links(monkeypatch):
+    body = '<a href="blank:trabajoregistrado_2606_estadisticas.xlsx">archivo</a>'
+    monkeypatch.setattr(registered_employment, "urlopen", lambda *_args, **_kwargs: Response(body))
+
+    assert registered_employment._source_url() == registered_employment.FALLBACK_URL
+
+
+def test_source_url_recovers_an_official_url_embedded_in_a_wrapper(monkeypatch):
+    expected = "https://www.argentina.gob.ar/sites/default/files/trabajoregistrado_2606_estadisticas.xlsx"
+    body = f'<a href="blank:{expected}">archivo</a>'
+    monkeypatch.setattr(registered_employment, "urlopen", lambda *_args, **_kwargs: Response(body))
+
+    assert registered_employment._source_url() == expected

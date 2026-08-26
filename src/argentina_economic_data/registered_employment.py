@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import csv
+import html
 import json
 import os
 import re
@@ -9,7 +10,7 @@ import unicodedata
 from datetime import datetime, timezone
 from decimal import Decimal
 from pathlib import Path
-from urllib.parse import urljoin
+from urllib.parse import urljoin, urlparse
 from urllib.request import Request, urlopen
 
 import pandas as pd
@@ -70,10 +71,20 @@ def _source_url() -> str:
     try:
         request = Request(LANDING_URL, headers={"User-Agent": "DatArg/1.0"})
         with urlopen(request, timeout=30) as response:
-            html = response.read().decode("utf-8", errors="ignore")
-        links = re.findall(r'href=["\']([^"\']*trabajoregistrado_\d{4}_estadisticas\.xlsx[^"\']*)', html, re.I)
-        if links:
-            return urljoin(LANDING_URL, max(links, key=lambda link: re.search(r"_(\d{4})_", link).group(1)))
+            page = response.read().decode("utf-8", errors="ignore")
+        links = re.findall(r'href=["\']([^"\']*trabajoregistrado_\d{4}_estadisticas\.xlsx[^"\']*)', page, re.I)
+        candidates: list[str] = []
+        for link in links:
+            link = html.unescape(link)
+            embedded = re.search(r"https?://[^\s\"']+trabajoregistrado_\d{4}_estadisticas\.xlsx", link, re.I)
+            url = embedded.group(0) if embedded else urljoin(LANDING_URL, link)
+            parsed = urlparse(url)
+            if parsed.scheme in {"http", "https"} and parsed.hostname in {
+                "argentina.gob.ar", "www.argentina.gob.ar"
+            }:
+                candidates.append(url)
+        if candidates:
+            return max(candidates, key=lambda url: re.search(r"_(\d{4})_", url).group(1))
     except Exception:
         pass
     return FALLBACK_URL
