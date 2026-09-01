@@ -39,6 +39,10 @@ class PipelineError(RuntimeError):
     """Falla visible de descarga, esquema o calidad."""
 
 
+class SourceUnavailableError(PipelineError):
+    """La fuente remota no respondió después de varios intentos."""
+
+
 @dataclass(frozen=True)
 class Artifact:
     source_id: str
@@ -78,7 +82,7 @@ def _download(source_id: str, url: str, target: Path) -> None:
             if not _is_transient_download_error(exc):
                 raise
             if attempt == DOWNLOAD_ATTEMPTS:
-                raise PipelineError(
+                raise SourceUnavailableError(
                     f"{source_id}: descarga falló tras {DOWNLOAD_ATTEMPTS} intentos: {exc}"
                 ) from exc
             time.sleep(DOWNLOAD_BACKOFF_SECONDS[attempt - 1])

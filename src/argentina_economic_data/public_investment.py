@@ -5,6 +5,8 @@ import json
 import os
 import re
 import tempfile
+import time
+import urllib.error
 import urllib.request
 from datetime import datetime, timezone
 from decimal import Decimal, InvalidOperation
@@ -14,7 +16,16 @@ from urllib.parse import urljoin
 
 import pandas as pd
 
-from .inflation import OUTPUT_COLUMNS, Artifact, PipelineError, acquire
+from .inflation import (
+    DOWNLOAD_ATTEMPTS,
+    DOWNLOAD_BACKOFF_SECONDS,
+    OUTPUT_COLUMNS,
+    TRANSIENT_HTTP_STATUS,
+    Artifact,
+    PipelineError,
+    SourceUnavailableError,
+    acquire,
+)
 
 PORTAL_URL = "https://www.argentina.gob.ar/jefatura/presupuestaria/inversion-publica/portal-de-datos-de-inversion-publica"
 DEFAULT_RESOURCE_URL = "https://www.argentina.gob.ar/sites/default/files/mayo_2026_-series_de_inversion_publica_y_gastos_de_capital_actualizado_para_web.xlsx"
@@ -57,11 +68,22 @@ class _Links(HTMLParser):
 
 def _html(url: str) -> str:
     request = urllib.request.Request(url, headers={"User-Agent": "argentina-economic-data/0.2"})
-    try:
-        with urllib.request.urlopen(request, timeout=60) as response:
-            return response.read().decode("utf-8", errors="replace")
-    except Exception as exc:
-        raise PipelineError(f"inversión pública: no se pudo consultar {url}: {exc}") from exc
+    for attempt in range(1, DOWNLOAD_ATTEMPTS + 1):
+        try:
+            with urllib.request.urlopen(request, timeout=60) as response:
+                return response.read().decode("utf-8", errors="replace")
+        except Exception as exc:
+            transient = (
+                isinstance(exc, urllib.error.HTTPError) and exc.code in TRANSIENT_HTTP_STATUS
+            ) or isinstance(exc, (urllib.error.URLError, TimeoutError, ConnectionError))
+            if not transient:
+                raise PipelineError(f"inversión pública: no se pudo consultar {url}: {exc}") from exc
+            if attempt == DOWNLOAD_ATTEMPTS:
+                raise SourceUnavailableError(
+                    f"inversión pública: la fuente no respondió tras {DOWNLOAD_ATTEMPTS} intentos: {url}: {exc}"
+                ) from exc
+            time.sleep(DOWNLOAD_BACKOFF_SECONDS[attempt - 1])
+    raise AssertionError("bucle de reintentos incompleto")
 
 
 def discover_resource_url() -> str:
@@ -276,6 +298,23 @@ def promote(records: list[dict[str, str]], root: Path, run_id: str) -> dict[str,
 
 def run(root: Path, source_file: Path | None = None) -> dict[str, object]:
     run_id = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-    resource_url = DEFAULT_RESOURCE_URL if source_file else discover_resource_url()
-    artifact = acquire("jgm_public_investment_series", resource_url, root / "data" / "raw", source_file)
+    try:
+        resource_url = DEFAULT_RESOURCE_URL if source_file else discover_resource_url()
+        artifact = acquire("jgm_public_investment_series", resource_url, root / "data" / "raw", source_file)
+    except SourceUnavailableError as exc:
+        target = root / "data" / "processed" / "public_investment.csv"
+        if not target.exists() or target.stat().st_size == 0:
+            raise
+        log_dir = root / "data" / "logs" / "public_investment"
+        log_dir.mkdir(parents=True, exist_ok=True)
+        report: dict[str, object] = {
+            "run_id": run_id,
+            "status": "stale_source_unavailable",
+            "preserved": str(target.relative_to(root)),
+            "reason": str(exc),
+        }
+        (log_dir / f"{run_id}.json").write_text(
+            json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+        )
+        return report
     return promote(extract(artifact), root, run_id)

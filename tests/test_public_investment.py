@@ -4,8 +4,8 @@ from pathlib import Path
 
 import pandas as pd
 
-from argentina_economic_data.inflation import Artifact
-from argentina_economic_data.public_investment import CAPITAL_FUNCTIONS, PUBLIC_FUNCTIONS, extract
+from argentina_economic_data.inflation import Artifact, SourceUnavailableError
+from argentina_economic_data.public_investment import CAPITAL_FUNCTIONS, PUBLIC_FUNCTIONS, extract, run
 
 
 def _total_sheet(years: list[object], title: str, values: list[float]) -> pd.DataFrame:
@@ -58,3 +58,20 @@ def test_extract_public_investment_levels_components_and_excludes_projection(tmp
     assert values[("jgm_public_investment_function_gdp_ratio_transport", "2023")] == "0.200000"
     assert values[("jgm_capital_expenditure_real_index", "2019")] == "100.000000"
     assert not any(row["period"] == "2026" for row in rows)
+
+
+def test_preserves_existing_dataset_when_remote_source_is_temporarily_unavailable(
+    tmp_path: Path, monkeypatch,
+) -> None:
+    target = tmp_path / "data" / "processed" / "public_investment.csv"
+    target.parent.mkdir(parents=True)
+    target.write_text("series_id,period\nexisting,2025\n", encoding="utf-8")
+
+    def unavailable() -> str:
+        raise SourceUnavailableError("HTTP 502")
+
+    monkeypatch.setattr("argentina_economic_data.public_investment.discover_resource_url", unavailable)
+    report = run(tmp_path)
+
+    assert report["status"] == "stale_source_unavailable"
+    assert target.read_text(encoding="utf-8") == "series_id,period\nexisting,2025\n"

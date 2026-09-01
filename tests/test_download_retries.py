@@ -7,7 +7,7 @@ import urllib.error
 from pathlib import Path
 from unittest.mock import patch
 
-from argentina_economic_data.inflation import acquire
+from argentina_economic_data.inflation import SourceUnavailableError, acquire
 
 
 class _Headers:
@@ -53,6 +53,20 @@ class DownloadRetryTests(unittest.TestCase):
 
         self.assertEqual(urlopen.call_count, 1)
         sleep.assert_not_called()
+
+    @patch("argentina_economic_data.inflation.time.sleep")
+    @patch("argentina_economic_data.inflation.urllib.request.urlopen")
+    def test_reports_exhausted_transient_source_separately(self, urlopen, sleep):
+        urlopen.side_effect = urllib.error.HTTPError(
+            "https://example.test/data", 502, "Bad Gateway", None, None
+        )
+
+        with tempfile.TemporaryDirectory() as tmp:
+            with self.assertRaises(SourceUnavailableError):
+                acquire("transient_source", "https://example.test/data.json", Path(tmp))
+
+        self.assertEqual(urlopen.call_count, 5)
+        self.assertEqual([call.args[0] for call in sleep.call_args_list], [2, 4, 8, 16])
 
 
 if __name__ == "__main__":
