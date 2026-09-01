@@ -12,7 +12,7 @@ from pathlib import Path
 import xlrd
 from openpyxl import load_workbook
 
-from .inflation import OUTPUT_COLUMNS, Artifact, PipelineError, acquire
+from .inflation import OUTPUT_COLUMNS, Artifact, PipelineError, SourceUnavailableError, acquire
 
 SOURCE_PAGE = "https://www.bcra.gob.ar/prestamos-y-otros-activos-de-las-entidades-financieras/"
 PRIVATE_URL = "https://www.bcra.gob.ar/archivos/Pdfs/PublicacionesEstadisticas/perser_priv.xls"
@@ -22,6 +22,10 @@ SECURITIES_URL = "https://www.bcra.gob.ar/archivos/Pdfs/PublicacionesEstadistica
 MONTHLY_INDICATORS_URL = (
     "https://www.bcra.gob.ar/archivos/Pdfs/PublicacionesEstadisticas/informes/"
     "indicadores-informe-monetario-mensual-{period}.xlsx"
+)
+LEGACY_MONTHLY_INDICATORS_URL = (
+    "https://www.bcra.gob.ar/archivos/Pdfs/PublicacionesEstadisticas/informes/"
+    "indicadores-informe-monetario-mensual-{month}-{year}.xlsx"
 )
 REAL_BASE_PERIOD = "2019-12"
 LEVEL_SERIES = {
@@ -248,7 +252,7 @@ def _official_private_credit_gdp(artifact: Artifact) -> list[dict[str, str]]:
     return records
 
 
-def _previous_months(count: int = 3) -> list[str]:
+def _previous_months(count: int = 6) -> list[str]:
     now = datetime.now(timezone.utc)
     year, month = now.year, now.month
     periods: list[str] = []
@@ -270,12 +274,19 @@ def _acquire_monthly_indicators(raw: Path, local: Path | None) -> Artifact:
         )
     errors: list[str] = []
     for period in _previous_months():
-        url = MONTHLY_INDICATORS_URL.format(period=period)
-        try:
-            return acquire("bcra_monthly_monetary_indicators_xlsx", url, raw)
-        except PipelineError as exc:
-            errors.append(f"{period}: {exc}")
-    raise PipelineError("crédito BCRA: no se encontró el último informe monetario; " + " | ".join(errors))
+        year, month = period.split("-")
+        urls = (
+            MONTHLY_INDICATORS_URL.format(period=period),
+            LEGACY_MONTHLY_INDICATORS_URL.format(year=year, month=month),
+        )
+        for url in urls:
+            try:
+                return acquire("bcra_monthly_monetary_indicators_xlsx", url, raw)
+            except (PipelineError, OSError) as exc:
+                errors.append(f"{url}: {exc}")
+    raise SourceUnavailableError(
+        "crédito BCRA: no se encontró el último informe monetario; " + " | ".join(errors)
+    )
 
 
 def _existing_official_private_ratios(root: Path) -> list[dict[str, str]]:
@@ -503,10 +514,16 @@ def run(
     )
     public = acquire("bcra_public_sector_loans_xls", PUBLIC_URL, raw, public_file)
     securities = acquire("bcra_public_securities_xls", SECURITIES_URL, raw, securities_file)
-    indicators = _acquire_monthly_indicators(raw, indicators_file)
     records = extract(private, private_currency, public, securities)
-    current_official_ratios = _official_private_credit_gdp(indicators)
     retained_official_ratios = _existing_official_private_ratios(root)
+    try:
+        indicators = _acquire_monthly_indicators(raw, indicators_file)
+    except SourceUnavailableError:
+        if not retained_official_ratios:
+            raise
+        current_official_ratios: list[dict[str, str]] = []
+    else:
+        current_official_ratios = _official_private_credit_gdp(indicators)
     all_official_ratios = retained_official_ratios + current_official_ratios
     records.extend(calculate_derived(
         records,
