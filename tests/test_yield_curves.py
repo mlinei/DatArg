@@ -66,6 +66,28 @@ class YieldCurveTests(unittest.TestCase):
         self.assertTrue(all(row["snapshot_date"] == "2026-07-31" for row in result))
         self.assertAlmostEqual(float(result[0]["annual_yield"]), 26.39754, places=4)
 
+    def test_public_nominal_accepts_current_argentinadatos_schema(self):
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / "letters.json"
+            source.write_text(json.dumps({
+                "fechaActualizacion": "2026-08-01T15:00:00Z",
+                "letras": [
+                    {"ticker": "S15S6", "precioArs": 106.74, "teaPorcentaje": 25.95,
+                     "fechaVencimiento": "2026-09-15", "volumen": 10},
+                    {"ticker": "S30S6", "precioArs": 104.20, "teaPorcentaje": 27.10,
+                     "fechaVencimiento": "2026-09-30", "volumen": 20},
+                    {"ticker": "T15E7", "precioArs": 150.50, "teaPorcentaje": 29.25,
+                     "fechaVencimiento": "2027-01-15", "volumen": 30},
+                    {"ticker": "TTD26", "precioArs": 100, "teaPorcentaje": 20,
+                     "fechaVencimiento": "2026-12-15", "volumen": 40},
+                ],
+            }), encoding="utf-8")
+            result = extract_public_nominal(self.artifact(source))
+        self.assertEqual([row["ticker"] for row in result], ["S15S6", "S30S6", "T15E7"])
+        self.assertTrue(all(row["snapshot_date"] == "2026-07-31" for row in result))
+        self.assertTrue(all(row["status"] == "reported_yield" for row in result))
+        self.assertAlmostEqual(float(result[0]["annual_yield"]), 25.95, places=6)
+
     def test_empty_public_cer_is_non_fatal(self):
         with tempfile.TemporaryDirectory() as directory:
             source = Path(directory) / "cer.json"

@@ -5,6 +5,7 @@ import hashlib
 import json
 import math
 import os
+import re
 import tempfile
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
@@ -158,14 +159,36 @@ def extract(source: Path) -> list[dict[str, str]]:
     return records
 
 
-def _json_list(artifact: Artifact, label: str) -> list[dict[str, object]]:
+def _json_list(
+    artifact: Artifact, label: str, collection_key: str | None = None,
+) -> list[dict[str, object]]:
     try:
         payload = json.loads(artifact.path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
         raise PipelineError(f"curvas públicas: JSON inválido en {label}") from exc
+    if collection_key is not None and isinstance(payload, dict):
+        payload = payload.get(collection_key)
     if not isinstance(payload, list):
         raise PipelineError(f"curvas públicas: esquema inesperado en {label}")
     return [row for row in payload if isinstance(row, dict)]
+
+
+def _letters_payload(artifact: Artifact) -> tuple[list[dict[str, object]], object]:
+    """Acepta tanto la respuesta histórica (lista) como la actual (objeto)."""
+    try:
+        payload = json.loads(artifact.path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise PipelineError("curvas públicas: JSON inválido en ArgentinaDatos/letras") from exc
+    if isinstance(payload, list):
+        return [row for row in payload if isinstance(row, dict)], None
+    if isinstance(payload, dict) and isinstance(payload.get("letras"), list):
+        return [row for row in payload["letras"] if isinstance(row, dict)], payload.get("fechaActualizacion")
+    raise PipelineError("curvas públicas: esquema inesperado en ArgentinaDatos/letras")
+
+
+def _reported_nominal_schema(artifact: Artifact) -> bool:
+    terms, _ = _letters_payload(artifact)
+    return any("teaPorcentaje" in row and "precioArs" in row for row in terms)
 
 
 def _previous_market_day(moment: datetime) -> date:
@@ -202,10 +225,51 @@ def _public_record(
 
 
 def extract_public_nominal(
-    letters: Artifact, notes: Artifact, bonds: Artifact,
+    letters: Artifact, notes: Artifact | None = None, bonds: Artifact | None = None,
 ) -> list[dict[str, str]]:
     """Construye LECAP/BONCAP con metadatos públicos y cotizaciones demoradas."""
-    terms = _json_list(letters, "ArgentinaDatos/letras")
+    terms, updated = _letters_payload(letters)
+    if any("teaPorcentaje" in row and "precioArs" in row for row in terms):
+        try:
+            moment = datetime.fromisoformat(str(updated or letters.retrieved_at).replace("Z", "+00:00"))
+        except ValueError:
+            moment = datetime.fromisoformat(letters.retrieved_at.replace("Z", "+00:00"))
+        snapshot = _previous_market_day(moment)
+        settlement = _next_business_day(snapshot)
+        rows: list[dict[str, str]] = []
+        for term in terms:
+            ticker = str(term.get("ticker", "")).upper()
+            # Las S son LECAP. Los BONCAP vigentes siguen el patrón T15E7,
+            # T30A7, etc.; excluimos duales/TAMAR y otros bonos T.
+            is_lecap = ticker.startswith("S")
+            is_boncap = bool(re.fullmatch(r"T\d{2}[A-Z]\d", ticker))
+            if not (is_lecap or is_boncap):
+                continue
+            try:
+                maturity = date.fromisoformat(str(term["fechaVencimiento"]))
+                price = float(term.get("precioArs") or term.get("cierreArs"))
+                rate = float(term["teaPorcentaje"]) / 100
+                volume = float(term.get("volumen") or 0)
+            except (KeyError, TypeError, ValueError):
+                continue
+            days = (maturity - settlement).days
+            if days <= 0 or price <= 0 or volume < 0 or not math.isfinite(rate) or rate <= -1:
+                continue
+            rows.append(_public_record(
+                snapshot=snapshot, settlement=settlement, ticker=ticker,
+                instrument_name="LECAP" if is_lecap else "BONCAP",
+                curve_type="nominal", instrument_type="lecap" if is_lecap else "boncap",
+                maturity=maturity, price=price, rate=rate, duration=days / 365,
+                volume=volume, status="reported_yield",
+                source_id="argentinadatos_reported_yield_curves", source_url=LETTERS_URL,
+                checksum=letters.sha256, retrieved_at=letters.retrieved_at,
+            ))
+        if len(rows) < 3:
+            raise PipelineError(f"curvas públicas: sólo quedaron {len(rows)} instrumentos nominales válidos")
+        return sorted(rows, key=lambda row: (int(row["days_to_maturity"]), row["ticker"]))
+
+    if notes is None or bonds is None:
+        raise PipelineError("curvas públicas: el esquema histórico requiere cotizaciones")
     note_quotes = _json_list(notes, "Data912/notas")
     bond_quotes = _json_list(bonds, "Data912/bonos")
     term_by_ticker = {str(row.get("ticker", "")).upper(): row for row in terms}
@@ -251,6 +315,19 @@ def extract_public_nominal(
     if len(rows) < 3:
         raise PipelineError(f"curvas públicas: sólo quedaron {len(rows)} instrumentos nominales válidos")
     return sorted(rows, key=lambda row: (int(row["days_to_maturity"]), row["ticker"]))
+
+
+def _latest_existing_rows(root: Path, curve_type: str) -> list[dict[str, str]]:
+    """Recupera la última curva válida para que una fuente opcional no bloquee el pipeline."""
+    target = root / "data" / "processed" / "yield_curves.csv"
+    if not target.exists():
+        return []
+    with target.open(encoding="utf-8", newline="") as handle:
+        rows = [row for row in csv.DictReader(handle) if row.get("curve_type") == curve_type]
+    if not rows:
+        return []
+    latest = max(row.get("snapshot_date", "") for row in rows)
+    return [row for row in rows if row.get("snapshot_date") == latest]
 
 
 def extract_public_cer(artifact: Artifact) -> list[dict[str, str]]:
@@ -449,11 +526,23 @@ def run(root: Path, source_file: Path | None = None) -> dict[str, object]:
     source = source_file or (Path(os.environ["BYMA_YIELD_CURVE_FILE"]) if os.environ.get("BYMA_YIELD_CURVE_FILE") else None)
     if source is None:
         raw = root / "data" / "raw"
-        letters = acquire("argentinadatos_yield_curve_terms", LETTERS_URL, raw)
-        notes = acquire("data912_yield_curve_notes", NOTES_URL, raw)
-        bonds = acquire("data912_yield_curve_bonds", BONDS_URL, raw)
-        records = extract_public_nominal(letters, notes, bonds)
         warnings: list[str] = []
+        try:
+            letters = acquire("argentinadatos_yield_curve_terms", LETTERS_URL, raw)
+            if _reported_nominal_schema(letters):
+                records = extract_public_nominal(letters)
+            else:
+                notes = acquire("data912_yield_curve_notes", NOTES_URL, raw)
+                bonds = acquire("data912_yield_curve_bonds", BONDS_URL, raw)
+                records = extract_public_nominal(letters, notes, bonds)
+        except Exception as nominal_exc:
+            records = _latest_existing_rows(root, "nominal")
+            if not records:
+                raise
+            warnings.append(
+                "Curva nominal no disponible; se conservó el último corte válido "
+                f"({type(nominal_exc).__name__})"
+            )
         try:
             cer_config = acquire("rendimientos_yield_curve_config", RENDIMIENTOS_CONFIG_URL, raw)
             cer_prices = acquire("rendimientos_yield_curve_prices", RENDIMIENTOS_CER_PRICES_URL, raw)
