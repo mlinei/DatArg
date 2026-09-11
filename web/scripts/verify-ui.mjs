@@ -22,6 +22,14 @@ for (const id of known) {
 }
 for (const [id, area] of assignments) if (!known.has(id)) errors.push(`el área "${area}" referencia un indicador inexistente: "${id}"`);
 
+const prices = sections.find(section => section.id === 'precios');
+const dollarInflation = prices?.charts.find(chart => chart.title === 'Inflación en dólares');
+if (!dollarInflation) errors.push('falta el gráfico de inflación en dólares');
+if (dollarInflation?.file !== 'usd_inflation.csv') errors.push('el gráfico de inflación en dólares no usa su dataset canónico');
+if (!dollarInflation?.metricToggle?.seriesByMetric?.index?.datarg_usd_inflation_index_jan_2024) errors.push('falta la serie índice de inflación en dólares');
+if (!dollarInflation?.metricToggle?.seriesByMetric?.mom?.datarg_usd_inflation_mom) errors.push('falta la serie mensual de inflación en dólares');
+if (!dollarInflation?.metricToggle?.seriesByMetric?.yoy?.datarg_usd_inflation_yoy) errors.push('falta la serie interanual de inflación en dólares');
+
 if (errors.length) {
   console.error(`\nValidación de interfaz fallida:\n- ${errors.join('\n- ')}\n`);
   process.exit(1);

@@ -25,6 +25,14 @@ aed inflation --ipc-file /ruta/serie_ipc_divisiones.csv --ipim-file /ruta/series
 
 El proceso falla antes de promover si recibe HTML, un archivo vacío, un esquema desconocido, claves duplicadas, un panel IPC incompleto, cobertura inesperada o pérdida de observaciones respecto de la versión publicada.
 
+### Inflación en dólares
+
+```bash
+aed usd-inflation
+```
+
+Combina el IPC general con el promedio mensual del dólar oficial minorista de venta y publica el nivel de precios convertido a dólares, con enero de 2024=100, además de sus variaciones mensual e interanual. Es un cálculo de DatArg: no representa la inflación de Estados Unidos ni utiliza dólares financieros. La salida queda en `data/processed/usd_inflation.csv`.
+
 ## Actividad económica (EMAE)
 
 ```bash

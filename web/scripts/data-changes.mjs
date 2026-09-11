@@ -28,6 +28,7 @@ export const DATASETS = {
   'treasury_liquidity.csv': { label: 'liquidez del Tesoro', section: 'liquidez-tesoro' },
   'reserves.csv': { label: 'reservas brutas', section: 'reservas' },
   'trade.csv': { label: 'comercio exterior', section: 'comercio' },
+  'usd_inflation.csv': { label: 'inflación en dólares', section: 'precios' },
   'wages.csv': { label: 'salarios', section: 'salarios' }
 };
 
