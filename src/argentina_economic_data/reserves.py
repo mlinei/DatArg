@@ -12,6 +12,7 @@ from .inflation import OUTPUT_COLUMNS, Artifact, PipelineError, acquire
 
 VARIABLE_ID = 1
 SOURCE_URL = f"https://api.bcra.gob.ar/estadisticas/v4.0/Monetarias/{VARIABLE_ID}"
+EXPECTED_HISTORY_START = "1996-01-03"
 
 
 def extract(artifact: Artifact) -> list[dict[str, str]]:
@@ -45,7 +46,10 @@ def promote(records: list[dict[str, str]], root: Path, run_id: str) -> dict[str,
     records.sort(key=lambda row: row["period"])
     keys = [row["period"] for row in records]
     if len(keys) != len(set(keys)): raise PipelineError("reservas BCRA: fechas duplicadas")
-    if not keys or keys[0] != "1996-01-03": raise PipelineError("reservas BCRA: cobertura inicial inesperada")
+    # The BCRA can backfill older observations. Accept those valid extensions,
+    # but keep rejecting a source response that drops the historical coverage.
+    if not keys or keys[0] > EXPECTED_HISTORY_START:
+        raise PipelineError("reservas BCRA: cobertura inicial inesperada")
     target_dir = root/"data"/"processed"; log_dir = root/"data"/"logs"/"reserves"
     target_dir.mkdir(parents=True, exist_ok=True); log_dir.mkdir(parents=True, exist_ok=True)
     target = target_dir/"reserves.csv"; old = {}
