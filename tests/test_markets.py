@@ -49,14 +49,14 @@ def market_row(period: str, value: str, source_sha256: str = "new") -> dict[str,
 
 def test_promote_retains_dates_temporarily_omitted_by_source(tmp_path: Path):
     initial = [
-        market_row("2026-07-23", "2100", "old"),
-        market_row("2026-07-24", "2200", "old"),
+        market_row("2019-01-11", "2100", "old"),
+        market_row("2019-01-14", "2200", "old"),
     ]
     promote(initial, tmp_path, "initial")
 
     report = promote([
-        market_row("2026-07-23", "2150"),
-        market_row("2026-07-27", "2250"),
+        market_row("2019-01-11", "2150"),
+        market_row("2019-01-15", "2250"),
     ], tmp_path, "update")
 
     rows = {
@@ -65,19 +65,48 @@ def test_promote_retains_dates_temporarily_omitted_by_source(tmp_path: Path):
             (tmp_path / "data" / "processed" / "markets.csv").open(encoding="utf-8")
         )
     }
-    assert list(rows) == ["2026-07-23", "2026-07-24", "2026-07-27"]
-    assert rows["2026-07-23"]["value"] == "2150"
-    assert rows["2026-07-24"]["value"] == "2200"
-    assert rows["2026-07-24"]["source_sha256"] == "old"
+    assert list(rows) == ["2019-01-11", "2019-01-14", "2019-01-15"]
+    assert rows["2019-01-11"]["value"] == "2150"
+    assert rows["2019-01-14"]["value"] == "2200"
+    assert rows["2019-01-14"]["source_sha256"] == "old"
     assert report["created"] == 1
     assert report["deleted"] == 0
     assert report["retained_from_history"] == 1
     assert report["modified"] == 1
 
 
+def test_promote_allows_initial_dates_omitted_after_history_exists(tmp_path: Path):
+    initial = [
+        market_row("2019-01-11", "900", "old"),
+        market_row("2019-01-14", "910", "old"),
+        market_row("2019-01-15", "920", "old"),
+    ]
+    promote(initial, tmp_path, "initial")
+
+    report = promote([
+        market_row("2019-01-14", "915"),
+        market_row("2019-01-15", "925"),
+    ], tmp_path, "update")
+
+    rows = list(csv.DictReader(
+        (tmp_path / "data" / "processed" / "markets.csv").open(encoding="utf-8")
+    ))
+    assert [row["period"] for row in rows] == ["2019-01-11", "2019-01-14", "2019-01-15"]
+    assert report["retained_from_history"] == 1
+
+
+def test_promote_rejects_late_coverage_on_first_run(tmp_path: Path):
+    with pytest.raises(PipelineError, match="cobertura inicial inesperada"):
+        promote([market_row("2026-07-01", "2001")], tmp_path, "initial")
+
+
 def test_promote_rejects_abrupt_source_history_truncation(tmp_path: Path):
-    promote([market_row(f"2026-07-{day:02}", str(2000 + day)) for day in range(1, 21)],
-            tmp_path, "initial")
+    promote(
+        [market_row("2019-01-11", "900")]
+        + [market_row(f"2026-07-{day:02}", str(2000 + day)) for day in range(1, 21)],
+        tmp_path,
+        "initial",
+    )
 
     with pytest.raises(PipelineError, match="cobertura histórica"):
-        promote([market_row("2026-07-01", "2001")], tmp_path, "truncated")
+        promote([market_row("2019-01-11", "901")], tmp_path, "truncated")

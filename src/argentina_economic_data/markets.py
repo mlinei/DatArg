@@ -64,8 +64,8 @@ def calculate(ars: dict[str, Decimal], mep: dict[str, Decimal], artifact: Artifa
             "source_url": artifact.url, "source_sha256": artifact.sha256,
             "retrieved_at": artifact.retrieved_at,
         })
-    if not records or records[0]["period"] > "2019-01-15":
-        raise PipelineError("Merval: cobertura inicial inesperada")
+    if not records:
+        raise PipelineError("Merval: no hay fechas comunes con la serie MEP")
     return records
 
 
@@ -79,6 +79,8 @@ def promote(records: list[dict[str, str]], root: Path, run_id: str) -> dict[str,
         with target.open(encoding="utf-8", newline="") as handle:
             old_rows = {row["period"]: row for row in csv.DictReader(handle)}
     new_rows = {row["period"]: row for row in records}
+    if not old_rows and min(new_rows) > "2019-01-15":
+        raise PipelineError("Merval: cobertura inicial inesperada")
     old_keys, new_keys = old_rows.keys(), new_rows.keys()
     overlap = old_keys & new_keys
     if old_rows and len(overlap) < int(len(old_rows) * 0.9):
