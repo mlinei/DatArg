@@ -83,8 +83,11 @@ def promote(records: list[dict[str, str]], root: Path, run_id: str) -> dict[str,
         raise PipelineError("Merval: cobertura inicial inesperada")
     old_keys, new_keys = old_rows.keys(), new_rows.keys()
     overlap = old_keys & new_keys
-    if old_rows and len(overlap) < int(len(old_rows) * 0.9):
-        raise PipelineError("Merval: la cobertura histórica de la fuente retrocedió abruptamente")
+    if old_rows:
+        recent_history = set(sorted(old_keys)[-250:])
+        recent_overlap = recent_history & new_keys
+        if len(recent_overlap) < int(len(recent_history) * 0.9):
+            raise PipelineError("Merval: la cobertura reciente de la fuente retrocedió abruptamente")
 
     # Yahoo puede omitir transitoriamente cierres históricos. Las observaciones
     # ya publicadas son hechos persistidos: se retienen si no vienen en la

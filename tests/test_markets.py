@@ -1,5 +1,6 @@
 import csv
 import json
+from datetime import date, timedelta
 from decimal import Decimal
 from pathlib import Path
 
@@ -100,6 +101,22 @@ def test_promote_rejects_late_coverage_on_first_run(tmp_path: Path):
         promote([market_row("2026-07-01", "2001")], tmp_path, "initial")
 
 
+def test_promote_allows_source_to_drop_an_old_prefix(tmp_path: Path):
+    start = date(2019, 1, 11)
+    periods = [(start + timedelta(days=day)).isoformat() for day in range(300)]
+    promote([market_row(period, str(900 + index)) for index, period in enumerate(periods)],
+            tmp_path, "initial")
+
+    report = promote(
+        [market_row(period, str(1000 + index)) for index, period in enumerate(periods[-250:])],
+        tmp_path,
+        "update",
+    )
+
+    assert report["rows"] == 300
+    assert report["retained_from_history"] == 50
+
+
 def test_promote_rejects_abrupt_source_history_truncation(tmp_path: Path):
     promote(
         [market_row("2019-01-11", "900")]
@@ -108,5 +125,5 @@ def test_promote_rejects_abrupt_source_history_truncation(tmp_path: Path):
         "initial",
     )
 
-    with pytest.raises(PipelineError, match="cobertura histórica"):
+    with pytest.raises(PipelineError, match="cobertura reciente"):
         promote([market_row("2019-01-11", "901")], tmp_path, "truncated")
