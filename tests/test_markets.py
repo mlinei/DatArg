@@ -101,20 +101,20 @@ def test_promote_rejects_late_coverage_on_first_run(tmp_path: Path):
         promote([market_row("2026-07-01", "2001")], tmp_path, "initial")
 
 
-def test_promote_allows_source_to_drop_an_old_prefix(tmp_path: Path):
+def test_promote_allows_source_to_return_only_a_coherent_recent_tail(tmp_path: Path):
     start = date(2019, 1, 11)
     periods = [(start + timedelta(days=day)).isoformat() for day in range(300)]
     promote([market_row(period, str(900 + index)) for index, period in enumerate(periods)],
             tmp_path, "initial")
 
     report = promote(
-        [market_row(period, str(1000 + index)) for index, period in enumerate(periods[-250:])],
+        [market_row(period, str(1000 + index)) for index, period in enumerate(periods[-64:])],
         tmp_path,
         "update",
     )
 
     assert report["rows"] == 300
-    assert report["retained_from_history"] == 50
+    assert report["retained_from_history"] == 236
 
 
 def test_promote_allows_source_to_restart_as_contiguous_extension(tmp_path: Path):

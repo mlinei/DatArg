@@ -90,7 +90,14 @@ def promote(records: list[dict[str, str]], root: Path, run_id: str) -> dict[str,
         new_first = date.fromisoformat(min(new_keys))
         new_last = date.fromisoformat(max(new_keys))
         continuous_extension = old_last < new_first <= old_last + timedelta(days=7) and new_last > old_last
-        if len(recent_overlap) < int(len(recent_history) * 0.9) and not continuous_extension:
+        minimum_tail = min(40, len(recent_history))
+        coherent_recent_tail = (
+            new_last >= old_last
+            and len(recent_overlap) >= minimum_tail
+            and len(overlap) >= int(len(new_keys) * 0.9)
+        )
+        if (len(recent_overlap) < int(len(recent_history) * 0.9)
+                and not continuous_extension and not coherent_recent_tail):
             raise PipelineError(
                 "Merval: la cobertura reciente de la fuente retrocedió abruptamente "
                 f"(respuesta {new_first}..{new_last}, solapamiento "
