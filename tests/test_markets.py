@@ -117,6 +117,24 @@ def test_promote_allows_source_to_drop_an_old_prefix(tmp_path: Path):
     assert report["retained_from_history"] == 50
 
 
+def test_promote_allows_source_to_restart_as_contiguous_extension(tmp_path: Path):
+    start = date(2019, 1, 11)
+    periods = [(start + timedelta(days=day)).isoformat() for day in range(300)]
+    promote([market_row(period, str(900 + index)) for index, period in enumerate(periods)],
+            tmp_path, "initial")
+    continuation = [
+        (start + timedelta(days=302)).isoformat(),
+        (start + timedelta(days=303)).isoformat(),
+    ]
+
+    report = promote([market_row(period, "1300") for period in continuation],
+                     tmp_path, "update")
+
+    assert report["rows"] == 302
+    assert report["created"] == 2
+    assert report["retained_from_history"] == 300
+
+
 def test_promote_rejects_abrupt_source_history_truncation(tmp_path: Path):
     promote(
         [market_row("2019-01-11", "900")]

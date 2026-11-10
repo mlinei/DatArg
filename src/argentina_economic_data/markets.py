@@ -4,7 +4,7 @@ import csv
 import json
 import os
 import tempfile
-from datetime import datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
 from pathlib import Path
 
@@ -86,8 +86,16 @@ def promote(records: list[dict[str, str]], root: Path, run_id: str) -> dict[str,
     if old_rows:
         recent_history = set(sorted(old_keys)[-250:])
         recent_overlap = recent_history & new_keys
-        if len(recent_overlap) < int(len(recent_history) * 0.9):
-            raise PipelineError("Merval: la cobertura reciente de la fuente retrocedió abruptamente")
+        old_last = date.fromisoformat(max(old_keys))
+        new_first = date.fromisoformat(min(new_keys))
+        new_last = date.fromisoformat(max(new_keys))
+        continuous_extension = old_last < new_first <= old_last + timedelta(days=7) and new_last > old_last
+        if len(recent_overlap) < int(len(recent_history) * 0.9) and not continuous_extension:
+            raise PipelineError(
+                "Merval: la cobertura reciente de la fuente retrocedió abruptamente "
+                f"(respuesta {new_first}..{new_last}, solapamiento "
+                f"{len(recent_overlap)}/{len(recent_history)})"
+            )
 
     # Yahoo puede omitir transitoriamente cierres históricos. Las observaciones
     # ya publicadas son hechos persistidos: se retienen si no vienen en la
