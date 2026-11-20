@@ -135,6 +135,26 @@ def test_promote_allows_source_to_restart_as_contiguous_extension(tmp_path: Path
     assert report["retained_from_history"] == 300
 
 
+def test_promote_ignores_single_stale_latest_observation(tmp_path: Path):
+    start = date(2019, 1, 11)
+    periods = [(start + timedelta(days=day)).isoformat() for day in range(300)]
+    promote([market_row(period, str(900 + index)) for index, period in enumerate(periods)],
+            tmp_path, "initial")
+
+    report = promote([market_row(periods[-1], "999999")], tmp_path, "update")
+
+    rows = {
+        row["period"]: row
+        for row in csv.DictReader(
+            (tmp_path / "data" / "processed" / "markets.csv").open(encoding="utf-8")
+        )
+    }
+    assert rows[periods[-1]]["value"] == str(900 + 299)
+    assert report["source_status"] == "skipped_insufficient_history"
+    assert report["incoming_rows"] == 1
+    assert report["modified"] == 0
+
+
 def test_promote_rejects_abrupt_source_history_truncation(tmp_path: Path):
     promote(
         [market_row("2019-01-11", "900")]

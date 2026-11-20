@@ -98,6 +98,30 @@ def promote(records: list[dict[str, str]], root: Path, run_id: str) -> dict[str,
         )
         if (len(recent_overlap) < int(len(recent_history) * 0.9)
                 and not continuous_extension and not coherent_recent_tail):
+            # Yahoo a veces responde únicamente con la última observación ya
+            # publicada. No se usa ese valor aislado ni se reemplaza el
+            # historial, pero tampoco se bloquean las demás fuentes diarias.
+            if new_last == old_last and new_keys <= old_keys:
+                report = {
+                    "run_id": run_id,
+                    "rows": len(old_rows),
+                    "incoming_rows": len(records),
+                    "series": 1,
+                    "min_period": min(old_keys),
+                    "max_period": max(old_keys),
+                    "created": 0,
+                    "deleted": 0,
+                    "retained_from_history": len(old_rows),
+                    "modified": 0,
+                    "source_status": "skipped_insufficient_history",
+                    "source_min_period": min(new_keys),
+                    "source_max_period": max(new_keys),
+                    "recent_overlap": len(recent_overlap),
+                }
+                (log_dir / f"{run_id}.json").write_text(
+                    json.dumps(report, indent=2) + "\n", encoding="utf-8"
+                )
+                return report
             raise PipelineError(
                 "Merval: la cobertura reciente de la fuente retrocedió abruptamente "
                 f"(respuesta {new_first}..{new_last}, solapamiento "
