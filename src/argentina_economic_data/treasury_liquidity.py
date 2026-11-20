@@ -8,6 +8,7 @@ import os
 import tempfile
 from datetime import datetime, timezone
 from decimal import Decimal, InvalidOperation
+from itertools import product
 from pathlib import Path
 
 import xlrd
@@ -46,7 +47,7 @@ def _read_series(
     artifact: Artifact,
     wanted: set[str],
     *,
-    official_conflicts: dict[str, list[Decimal]] | None = None,
+    conflicts: dict[tuple[str, str], list[Decimal]] | None = None,
 ) -> dict[str, dict[str, Decimal]]:
     result = {code: {} for code in wanted}
     try:
@@ -70,8 +71,8 @@ def _read_series(
             if previous is not None:
                 if previous == value:
                     continue
-                if code == OFFICIAL_DEPOSITS_CODE and official_conflicts is not None:
-                    candidates = official_conflicts.setdefault(period, [previous])
+                if conflicts is not None:
+                    candidates = conflicts.setdefault((code, period), [previous])
                     if value not in candidates:
                         candidates.append(value)
                     continue
@@ -206,11 +207,11 @@ def extract(
     valuation_fx: Artifact,
     daily_balance: Artifact | None = None,
 ) -> list[dict[str, str]]:
-    official_conflicts: dict[str, list[Decimal]] = {}
+    balance_conflicts: dict[tuple[str, str], list[Decimal]] = {}
     balances = _read_series(
         balance,
         {OFFICIAL_DEPOSITS_CODE, ARS_CODE, FX_DEPOSITS_CODE},
-        official_conflicts=official_conflicts,
+        conflicts=balance_conflicts,
     )
     fx = _read_series(valuation_fx, {VALUATION_FX_CODE})[VALUATION_FX_CODE]
 
@@ -221,15 +222,38 @@ def extract(
     # El total de depósitos oficiales debe ser la suma de moneda nacional y extranjera.
     recent = [period for period in shared if period >= "2020-01-01"]
     for period in recent:
-        stored_official = balances[OFFICIAL_DEPOSITS_CODE].get(period)
-        if stored_official is None:
+        stored = {
+            code: balances[code].get(period)
+            for code in (OFFICIAL_DEPOSITS_CODE, ARS_CODE, FX_DEPOSITS_CODE)
+        }
+        if any(value is None for value in stored.values()):
             raise PipelineError(f"liquidez del Tesoro: falta el total de control en {period}")
-        components = balances[ARS_CODE][period] + balances[FX_DEPOSITS_CODE][period]
-        candidates = official_conflicts.get(period, [stored_official])
-        matching = [candidate for candidate in candidates if abs(candidate - components) <= Decimal("1")]
-        if len(matching) != 1:
+        candidates = {
+            code: balance_conflicts.get((code, period), [stored[code]])
+            for code in (OFFICIAL_DEPOSITS_CODE, ARS_CODE, FX_DEPOSITS_CODE)
+        }
+        matching = [
+            values
+            for values in product(
+                candidates[OFFICIAL_DEPOSITS_CODE],
+                candidates[ARS_CODE],
+                candidates[FX_DEPOSITS_CODE],
+            )
+            if abs(values[0] - values[1] - values[2]) <= Decimal("1")
+        ]
+        preferred = (
+            stored[OFFICIAL_DEPOSITS_CODE],
+            stored[ARS_CODE],
+            stored[FX_DEPOSITS_CODE],
+        )
+        if preferred in matching:
+            selected = preferred
+        elif len(matching) == 1:
+            selected = matching[0]
+        else:
             raise PipelineError(f"liquidez del Tesoro: componentes inconsistentes en {period}")
-        balances[OFFICIAL_DEPOSITS_CODE][period] = matching[0]
+        for code, value in zip((OFFICIAL_DEPOSITS_CODE, ARS_CODE, FX_DEPOSITS_CODE), selected):
+            balances[code][period] = value
 
     fx_dates = sorted(fx)
     composite_hash = hashlib.sha256(f"{balance.sha256}:{valuation_fx.sha256}".encode()).hexdigest()

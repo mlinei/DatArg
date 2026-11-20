@@ -57,13 +57,17 @@ def test_extracts_both_accounts_and_uses_last_business_day_fx(tmp_path: Path):
     for index, date in enumerate(months):
         ars = Decimal("1000000") + index
         foreign = Decimal("3000000") + index
-        if date == "31/05/2026":
-            balance_lines.append(f"105;{date};999999999")
         balance_lines += [
             f"105;{date};{ars + foreign}",
             f"106;{date};{ars}",
             f"107;{date};{foreign}",
         ]
+        if date == "31/05/2026":
+            balance_lines += [
+                f"105;{date};9000000",
+                f"106;{date};5000000",
+                f"107;{date};4000000",
+            ]
     fx_lines = []
     for date in months:
         if int(date[-4:]) < 2002:
