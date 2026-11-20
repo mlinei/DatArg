@@ -61,8 +61,14 @@ def _read_series(artifact: Artifact, wanted: set[str]) -> dict[str, dict[str, De
                 raise PipelineError(
                     f"liquidez del Tesoro: observación inválida en {artifact.path.name}:{row_number}"
                 ) from exc
-            if period in result[code]:
-                raise PipelineError(f"liquidez del Tesoro: fecha duplicada para serie {code}: {period}")
+            previous = result[code].get(period)
+            if previous is not None:
+                if previous == value:
+                    continue
+                raise PipelineError(
+                    f"liquidez del Tesoro: valores conflictivos para serie {code} en {period}: "
+                    f"{previous} y {value}"
+                )
             result[code][period] = value
     missing = [code for code in wanted if not result[code]]
     if missing:

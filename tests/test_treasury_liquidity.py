@@ -1,7 +1,9 @@
 from decimal import Decimal
 from pathlib import Path
 
-from argentina_economic_data.inflation import Artifact
+import pytest
+
+from argentina_economic_data.inflation import Artifact, PipelineError
 from argentina_economic_data.treasury_liquidity import (
     ARS_DAILY_CHANGE,
     ARS_DAILY_STOCK,
@@ -11,6 +13,7 @@ from argentina_economic_data.treasury_liquidity import (
     USD_DAILY_STOCK,
     USD_CHANGE,
     USD_STOCK,
+    _read_series,
     extract_daily,
     extract,
 )
@@ -19,6 +22,29 @@ from argentina_economic_data.treasury_liquidity import (
 def _artifact(path: Path, text: str, source_id: str) -> Artifact:
     path.write_text(text, encoding="latin-1")
     return Artifact(source_id, f"https://example.test/{path.name}", path, "hash", path.stat().st_size, "now")
+
+
+def test_read_series_collapses_identical_source_duplicates(tmp_path: Path):
+    source = _artifact(
+        tmp_path / "duplicated.txt",
+        "105;31/01/2026;5063480960\n105;31/01/2026;5063480960\n",
+        "balance",
+    )
+
+    values = _read_series(source, {"105"})
+
+    assert values["105"] == {"2026-01-31": Decimal("5063480960")}
+
+
+def test_read_series_rejects_conflicting_source_duplicates(tmp_path: Path):
+    source = _artifact(
+        tmp_path / "conflicting.txt",
+        "105;31/01/2026;1\n105;31/01/2026;2\n",
+        "balance",
+    )
+
+    with pytest.raises(PipelineError, match="valores conflictivos.*1 y 2"):
+        _read_series(source, {"105"})
 
 
 def test_extracts_both_accounts_and_uses_last_business_day_fx(tmp_path: Path):
